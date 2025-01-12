@@ -14,7 +14,7 @@ setup(
         "torchvision == 0.19.1",
         "torchaudio == 2.4.1",
         "transformers",
-        "accelerate == 0.21.0",
+        "accelerate",
         "fschat == 0.2.31",
         "gradio == 3.50.2",
         "openai == 0.28.0",
