@@ -10,7 +10,9 @@ setup(
     url='https://github.com/SafeAILab/EAGLE',
     packages=find_packages(),
     install_requires=[
-        "torch",
+        "torch == 2.4.1",
+        "torchvision == 0.19.1",
+        "torchaudio == 2.4.1",
         "transformers",
         "accelerate == 0.21.0",
         "fschat == 0.2.31",
@@ -20,7 +22,8 @@ setup(
         "sentencepiece == 0.2.0",
         "protobuf == 3.19.0",
         "wandb",
-        "datasets"
+        "datasets",
+        "huggingface"
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',

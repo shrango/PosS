@@ -65,7 +65,7 @@ rank = torch.distributed.get_rank()
 if rank == 0:
     import wandb
 
-    wandb.init(project="llama3-8B", entity="yuhui-li", config=train_config)
+    wandb.init(project="try-eagle", config=train_config)
 
 try:
     with open(os.path.join(args.basepath, "model.safetensors.index.json"), "r") as f:

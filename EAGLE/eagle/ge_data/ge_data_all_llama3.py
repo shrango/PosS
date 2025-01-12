@@ -37,7 +37,7 @@ def build_dataset_rank(
         tokenizer, split="train",
         select=None,
 ):
-    ds = load_dataset('json', data_files="/home/workspace/raw-data/ShareGPT_V4.3_unfiltered_cleaned_split.json")
+    ds = load_dataset('json', data_files="/home/jovyan/workspace/raw-data/ShareGPT_V4.3_unfiltered_cleaned_split.json")
     ds = ds['train']
     ds = ds.shuffle(seed=42)
     ds1 = ds.select(range(args.start, args.end))
