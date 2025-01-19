@@ -353,16 +353,31 @@ for epoch in range(num_epochs + 1):
 
         with accelerator.accumulate(model):
             optimizer.zero_grad()
-            all_predict = []
+            # all_predict = []
+            # previous_hs = data["hidden_states"]
+            # for _ in range(3):
+            #     predict = model(previous_hs, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
+            #     all_predict.append(predict)
+            #     last_hs = predict.clone().detach()[:,:-1,:]
+            #     previous = torch.cat([data["hidden_states"][:,:1,:], last_hs], dim=1).detach()
+
+            # loss = 0
+            # for predict in all_predict:
+            #     with torch.no_grad():
+            #         target_head = head(data["target"])
+            #         target_p = nn.Softmax(dim=2)(target_head)
+            #         target_p = target_p.detach()
+            #     loss_mask = data["loss_mask"][:, :, None]
+            #     vloss, ploss, out_head = compute_loss(data["target"], target_p, predict, loss_mask)
+            #     subloss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
+            #     loss += subloss
+            loss = 0
             previous_hs = data["hidden_states"]
             for _ in range(3):
                 predict = model(previous_hs, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
-                all_predict.append(predict)
                 last_hs = predict.clone().detach()[:,:-1,:]
                 previous = torch.cat([data["hidden_states"][:,:1,:], last_hs], dim=1).detach()
 
-            loss = 0
-            for predict in all_predict:
                 with torch.no_grad():
                     target_head = head(data["target"])
                     target_p = nn.Softmax(dim=2)(target_head)
