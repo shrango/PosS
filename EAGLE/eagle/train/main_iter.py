@@ -340,6 +340,7 @@ else:
     model, head, optimizer, train_loader, test_loader = accelerator.prepare(
         model, head, optimizer, train_loader, test_loader
     )
+model._set_static_graph()
 # accelerator.load_state("checkpoints/state_5")
 for epoch in range(num_epochs + 1):
     top_3acc = [0 for _ in range(3)]
