@@ -23,7 +23,7 @@ train_config = {
     "p_w": 0.1,
     "v_w": 1.0,
     "head_w": 0.1,
-    "num_workers": 1,
+    "num_workers": 2,
     "embeding": True,
     "act": "No",
     "data_noise": True,
@@ -53,7 +53,7 @@ from accelerate.utils import set_seed
 set_seed(0)
 accelerator = Accelerator(mixed_precision='bf16',
                           gradient_accumulation_steps=train_config["gradient_accumulation_steps"])
-from ..model.x_cnets import Model
+from ..model.cnets import Model
 from ..model.configs import EConfig
 from typing import Any, Dict, List
 
@@ -352,8 +352,9 @@ for epoch in range(num_epochs + 1):
 
         with accelerator.accumulate(model):
             optimizer.zero_grad()
-            kv_hidden_states = data["hidden_states"]
-            predict = model(data["hidden_states"], kv_hidden_states, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
+            predict = model(data["hidden_states"], input_ids=data["input_ids"], attention_mask=data["attention_mask"])
+            import pdb
+            pdb.set_trace()
             with torch.no_grad():
                 target_head = head(data["target"])
                 target_p = nn.Softmax(dim=2)(target_head)
