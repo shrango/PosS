@@ -1,0 +1,81 @@
+_wandb:
+    value:
+        cli_version: 0.18.7
+        m: []
+        python_version: 3.12.7
+        t:
+            "1":
+                - 1
+                - 11
+                - 49
+                - 55
+                - 71
+                - 105
+            "2":
+                - 1
+                - 11
+                - 49
+                - 55
+                - 71
+                - 105
+            "3":
+                - 16
+                - 23
+                - 55
+            "4": 3.12.7
+            "5": 0.18.7
+            "6": 4.48.0
+            "8":
+                - 5
+            "12": 0.18.7
+            "13": linux-x86_64
+act:
+    value: "No"
+b1:
+    value: 0.9
+b2:
+    value: 0.95
+bs:
+    value: 4
+config_path:
+    value: EAGLE-LLaMA3-Instruct-8B
+data_noise:
+    value: true
+datapath:
+    value: /home/jovyan/workspace/preprocess/sharegpt_0_67999_mufp16
+embeding:
+    value: true
+grad_clip:
+    value: 0.5
+gradient_accumulation_steps:
+    value: 1
+head_w:
+    value: 0.1
+is_warmup:
+    value: true
+lr:
+    value: 3e-05
+max_len:
+    value: 2048
+mean:
+    value: 0
+noise:
+    value: uniform
+num_epochs:
+    value: 20
+num_warmup_steps:
+    value: 2000
+num_workers:
+    value: 2
+p_w:
+    value: 0.1
+residual:
+    value: true,norm
+save_freq:
+    value: 5
+std:
+    value: 0.2
+total_steps:
+    value: 800000
+v_w:
+    value: 1

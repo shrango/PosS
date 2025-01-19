@@ -1,0 +1,67 @@
+{
+  "os": "Linux-5.15.0-210.163.7.el8uek.x86_64-x86_64-with-glibc2.35",
+  "python": "3.12.7",
+  "startedAt": "2025-01-12T19:19:27.777537Z",
+  "args": [
+    "--tmpdir",
+    "/home/jovyan/workspace/preprocess/sharegpt_0_67999_mufp16",
+    "--cpdir",
+    "/home/jovyan/workspace/project/llama3/standard/checkpoint",
+    "--configpath",
+    "EAGLE-LLaMA3-Instruct-8B"
+  ],
+  "program": "-m eagle.train.main",
+  "git": {
+    "remote": "git@github.com:shrango/my-eagle.git",
+    "commit": "00a4888663a980e62240890d83c270903ea7f4dd"
+  },
+  "email": "h.langlin@wustl.edu",
+  "root": "/home/jovyan/workspace/my-eagle/EAGLE/eagle/train",
+  "host": "w-langl-fastgen1-204272b3bd2a4048a195acce1271dcd3-696f79c86w9fk",
+  "username": "jovyan",
+  "executable": "/opt/saturncloud/envs/saturn/bin/python3.12",
+  "cpu_count": 128,
+  "cpu_count_logical": 255,
+  "gpu": "NVIDIA A100-SXM4-80GB",
+  "gpu_count": 4,
+  "disk": {
+    "/": {
+      "total": "310183723008",
+      "used": "77243469824"
+    }
+  },
+  "memory": {
+    "total": "2163702235136"
+  },
+  "cpu": {
+    "count": 128,
+    "countLogical": 255
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere"
+    },
+    {
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere"
+    },
+    {
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere"
+    },
+    {
+      "name": "NVIDIA A100-SXM4-80GB",
+      "memoryTotal": "85899345920",
+      "cudaCores": 6912,
+      "architecture": "Ampere"
+    }
+  ],
+  "cudaVersion": "12.6"
+}
