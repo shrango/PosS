@@ -355,7 +355,7 @@ for epoch in range(num_epochs + 1):
             optimizer.zero_grad()
             all_predict = []
             previous_hs = data["hidden_states"]
-            for _ in range(1):
+            for _ in range(3):
                 predict = model(previous_hs, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
                 all_predict.append(predict)
                 last_hs = predict.clone().detach()[:,:-1,:]
