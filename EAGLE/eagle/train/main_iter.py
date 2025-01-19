@@ -352,22 +352,31 @@ for epoch in range(num_epochs + 1):
 
         with accelerator.accumulate(model):
             optimizer.zero_grad()
-            loss_lst = []
-            previous_hs = [data["hidden_states"]]
+            all_predict = []
+            # previous_hs = [data["hidden_states"]]
+            # for _ in range(5):
+            #     predict = model(previous_hs[-1], input_ids=data["input_ids"], attention_mask=data["attention_mask"])
+            #     all_predict.append(predict)
+            #     last_hs = predict.clone().detach()[:,:-1,:]
+            #     previous_hs.append(torch.cat([data["hidden_states"][:,:1,:], last_hs], dim=1).detach())
+            previous_hs = data["hidden_states"]
             for _ in range(5):
-                predict = model(previous_hs[-1], input_ids=data["input_ids"], attention_mask=data["attention_mask"])
-                with torch.no_grad():
-                    last_hs = predict.clone().detach()[:,:-1,:]
-                    previous_hs.append(torch.cat([data["hidden_states"][:,:1,:], last_hs], dim=1).detach())
+                predict = model(previous_hs, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
+                all_predict.append(predict)
+                last_hs = predict.clone().detach()[:,:-1,:]
+                previous = torch.cat([data["hidden_states"][:,:1,:], last_hs], dim=1).detach()
 
+            loss = 0
+            for predict in all_predict:
+                with torch.no_grad():
                     target_head = head(data["target"])
                     target_p = nn.Softmax(dim=2)(target_head)
                     target_p = target_p.detach()
                 loss_mask = data["loss_mask"][:, :, None]
                 vloss, ploss, out_head = compute_loss(data["target"], target_p, predict, loss_mask)
-                loss_lst.append(train_config["v_w"] * vloss + train_config["p_w"] * ploss)
+                subloss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
+                loss += subloss
 
-            loss = sum(loss_lst)
             # loss.backward()
             accelerator.backward(loss)
             accelerator.clip_grad_value_(model.parameters(), train_config["grad_clip"])
