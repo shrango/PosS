@@ -356,9 +356,10 @@ for epoch in range(num_epochs + 1):
             previous_hs = data["hidden_states"]
             for _ in range(5):
                 predict = model(previous_hs, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
-                last_hs = predict.clone().detach()[:,:-1,:]
-                previous_hs = torch.cat([data["hidden_states"][:,:1,:], last_hs], dim=1)
                 with torch.no_grad():
+                    last_hs = predict.clone().detach()[:,:-1,:]
+                    previous_hs = torch.cat([data["hidden_states"][:,:1,:], last_hs], dim=1)
+                    
                     target_head = head(data["target"])
                     target_p = nn.Softmax(dim=2)(target_head)
                     target_p = target_p.detach()
