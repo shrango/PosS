@@ -240,6 +240,7 @@ class EaModel(nn.Module):
         )
         new_token = 0
 
+        forward_times = 0
         for idx in range(max_length):
             #with Timer("all"):
             self.base_model.model.tree_mask = tree_mask
@@ -263,6 +264,7 @@ class EaModel(nn.Module):
             )
             # print(accept_length)
             #with Timer("update_inference_inputs"):
+            forward_times += 1
             input_ids, draft_tokens, retrieve_indices,tree_mask,tree_position_ids, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,
                 candidates,
@@ -291,7 +293,7 @@ class EaModel(nn.Module):
         if not log:
             return input_ids
         else:
-            return input_ids, new_token, idx
+            return input_ids, new_token, forward_times, idx
 
 
     @torch.no_grad()
