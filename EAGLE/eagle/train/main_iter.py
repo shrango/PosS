@@ -358,7 +358,7 @@ for epoch in range(num_epochs + 1):
             # 写法1
             # all_predict = []
             # previous_hs = data["hidden_states"]
-            # for _ in range(3):
+            # for _ in range(5):
             #     predict = model(previous_hs, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
             #     all_predict.append(predict)
             #     last_hs = predict.clone().detach()[:,:-1,:]
@@ -378,7 +378,7 @@ for epoch in range(num_epochs + 1):
             # 写法2
             loss = 0
             previous_hs = data["hidden_states"]
-            for _ in range(3):
+            for _ in range(5):
                 predict = model(previous_hs, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
                 last_hs = predict.clone().detach()[:,:-1,:]
                 previous = torch.cat([data["hidden_states"][:,:1,:], last_hs], dim=1).detach()
