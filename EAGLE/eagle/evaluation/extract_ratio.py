@@ -76,4 +76,4 @@ plt.tight_layout()
 
 # 显示图表
 # plt.show()
-plt.savefig("example.jpg")
+plt.savefig(filename.replace(".jsonl","")+".jpg")
