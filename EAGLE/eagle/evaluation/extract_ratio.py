@@ -75,4 +75,5 @@ ax.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
 
 # 显示图表
-plt.show()
+# plt.show()
+plt.savefig("example.jpg")
