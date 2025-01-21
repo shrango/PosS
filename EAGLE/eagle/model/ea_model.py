@@ -263,7 +263,7 @@ class EaModel(nn.Module):
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor
             )
-            acc_len_count[accept_length] = acc_len_count.get(accept_length, 0) + 1
+            acc_len_count[int(accept_length)] = acc_len_count.get(int(accept_length), 0) + 1
             # print(accept_length)
             #with Timer("update_inference_inputs"):
             forward_times += 1
