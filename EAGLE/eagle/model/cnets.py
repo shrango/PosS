@@ -677,7 +677,6 @@ class Model(nn.Module):
         self.reset()
 
         # with Timer("draft many"):
-        pdb.set_trace()
         if hasattr(self, "stable_kv") and self.stable_kv is not None:
             kv_len = self.stable_kv[0][0].shape[2]
             out_hidden, past_key_values = self(hidden_states, input_ids=input_ids[:, kv_len:],
