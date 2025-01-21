@@ -219,6 +219,7 @@ def get_model_answers(
             new_tokens = []
             wall_time = []
             forward_times = []
+            acc_len_counts = {}
             for j in range(len(question["turns"])):
                 qs = question["turns"][j]
                 messages.append({
@@ -279,13 +280,15 @@ def get_model_answers(
                 idxs.append(int(idx))
                 new_tokens.append(int(new_token))
                 forward_times.append(forward_time)
+                for k in acc_len_count:
+                    acc_len_counts[k] = acc_len_counts.get(k, 0) + acc_len_count[k]
                 wall_time.append(total_time)
                 messages.append({
                     "role": "assistant",
                     "content": output
                 })
             # torch.cuda.empty_cache()
-            choices.append({"index": i, "turns": turns, "idxs": idxs, "new_tokens": new_tokens, "forward_times":forward_times, "acc_len_count":acc_len_count, "wall_time": wall_time})
+            choices.append({"index": i, "turns": turns, "idxs": idxs, "new_tokens": new_tokens, "forward_times":forward_times, "acc_len_count":acc_len_counts, "wall_time": wall_time})
 
         # Dump answers
         os.makedirs(os.path.dirname(answer_file), exist_ok=True)
