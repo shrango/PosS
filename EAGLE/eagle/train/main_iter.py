@@ -378,6 +378,7 @@ for epoch in range(num_epochs + 1):
             # 写法2
             loss = 0
             previous_hs = data["hidden_states"]
+            loss_weights = [1, 0.9, 0.8, 0.7, 0.6]
             for _ in range(4):
                 predict = model(previous_hs, input_ids=data["input_ids"], attention_mask=data["attention_mask"])
                 last_hs = predict.clone().detach()[:,:-1,:]
@@ -390,7 +391,7 @@ for epoch in range(num_epochs + 1):
                 loss_mask = data["loss_mask"][:, :, None]
                 vloss, ploss, out_head = compute_loss(data["target"], target_p, predict, loss_mask)
                 subloss = train_config["v_w"] * vloss + train_config["p_w"] * ploss
-                loss += subloss
+                loss += subloss * loss_weights[_]
 
             # loss.backward()
             accelerator.backward(loss)
