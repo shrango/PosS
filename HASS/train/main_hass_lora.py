@@ -340,6 +340,53 @@ if accelerator.is_main_process:
 config = EConfig.from_pretrained(train_config["config_path"])
 model = Model(config, load_emb=True, path=args.basepath)
 
+def load_layer_0_weights(model, state_dict_path):
+    """ 加载 layers.0 的参数，确保所有参数正确匹配 """
+    state_dict = torch.load(state_dict_path, map_location="cpu")
+    
+    # 构建新的 state_dict 以匹配 LoRA 处理后的参数结构
+    new_state_dict = {}
+
+    for key in state_dict.keys():
+        # 处理 base_model 参数匹配
+        if key.startswith("layers.0.self_attn.q_proj.weight"):
+            new_key = "layers.0.base_model.model.self_attn.q_proj.base_layer.weight"
+        elif key.startswith("layers.0.self_attn.v_proj.weight"):
+            new_key = "layers.0.base_model.model.self_attn.v_proj.base_layer.weight"
+        elif key.startswith("layers.0.self_attn.k_proj.weight"):
+            new_key = "layers.0.base_model.model.self_attn.k_proj.weight"
+        elif key.startswith("layers.0.self_attn.o_proj.weight"):
+            new_key = "layers.0.base_model.model.self_attn.o_proj.weight"
+        elif key.startswith("layers.0.mlp.gate_proj.weight"):
+            new_key = "layers.0.base_model.model.mlp.gate_proj.weight"
+        elif key.startswith("layers.0.mlp.up_proj.weight"):
+            new_key = "layers.0.base_model.model.mlp.up_proj.weight"
+        elif key.startswith("layers.0.mlp.down_proj.weight"):
+            new_key = "layers.0.base_model.model.mlp.down_proj.weight"
+        elif key.startswith("layers.0.post_attention_layernorm.weight"):
+            new_key = "layers.0.base_model.model.post_attention_layernorm.weight"
+        else:
+            new_key = key  # 其他参数保持不变
+
+        new_state_dict[new_key] = state_dict[key]  # 复制参数
+
+    # 使用 strict=True 确保所有参数正确加载
+    model.load_state_dict(new_state_dict, strict=True)
+    print("✅ Successfully loaded layers.0 weights.")
+
+def copy_base_model_weights(model):
+    """ 复制 layers.0 的 base_model 参数到 layers.1, layers.2... """
+    
+    base_model_keys = [
+        key for key in model.layers[0].state_dict().keys()
+        if "lora" not in key  # 只保留非 LoRA 参数
+    ]
+    
+    base_model_state = {key: model.layers[0].state_dict()[key].clone() for key in base_model_keys}
+
+    for i in range(1, len(model.layers)):  # 复制到 layers.1, layers.2...
+        model.layers[i].load_state_dict(base_model_state, strict=False)
+        print(f"✅ Copied base_model weights to layers.{i}")
 
 if args.ckpt_path is not None: 
     ea_model_path = args.ckpt_path
@@ -349,11 +396,10 @@ if args.ckpt_path is not None:
     else:
         load_model_path = os.path.join(ea_model_path, "model.safetensors")
         ea_layer_state_dict = safetensors.torch.load_file(load_model_path)
-    model.load_state_dict(ea_layer_state_dict, strict=True)
-    pdb.set_trace()
-    for i in range(1,len(model.layers)):
-        # copy layers[0] to layers[i], except lora parameters
-        model.layers[i].load_state_dict(model.layers[0].state_dict(), strict=False)
+    
+    # model.load_state_dict(ea_layer_state_dict, strict=True)
+    load_layer_0_weights(model, load_model_path)
+    copy_base_model_weights(model)
     print(f"load model from {load_model_path}")
 
 
