@@ -544,7 +544,7 @@ class Model(nn.Module):
         )
         for i in range(depth):
             self.layers[i] = get_peft_model(self.layers[i], lora_config)
-        self.layers.print_trainable_parameters()
+            self.layers[i].print_trainable_parameters()
 
         self.fc = nn.Linear(2 * config.hidden_size, config.hidden_size, bias=bias)
         self.act = ACT2FN[config.hidden_act]
