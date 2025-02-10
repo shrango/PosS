@@ -76,11 +76,14 @@ from tqdm import tqdm
 import numpy as np
 from transformers import get_linear_schedule_with_warmup, AutoConfig
 
+import torch.distributed as dist
+
+
 if accelerator.is_main_process:
     import wandb
 
-    wandb.login(key="")
-    wandb.init(project="HASS-lora", entity="", config=train_config)
+    wandb.login(key="69058053d563edd90b693d5ab15293d2d7cdfaa1")
+    wandb.init(project="eagle-lora", entity="935313841-washington-university-in-st-louis", config=train_config)
 
 baseconfig = AutoConfig.from_pretrained(args.basepath)
 
@@ -340,6 +343,7 @@ if accelerator.is_main_process:
 config = EConfig.from_pretrained(train_config["config_path"])
 model = Model(config, load_emb=True, path=args.basepath)
 
+
 def load_layer_0_weights(model, state_dict_path):
     """ 加载 layers.0 的参数，确保所有参数正确匹配 """
     state_dict = torch.load(state_dict_path, map_location="cpu")
@@ -370,8 +374,7 @@ def load_layer_0_weights(model, state_dict_path):
 
         new_state_dict[new_key] = state_dict[key]  # 复制参数
 
-    # 使用 strict=True 确保所有参数正确加载
-    model.load_state_dict(new_state_dict, strict=True)
+    model.load_state_dict(new_state_dict, strict=False)
     print("✅ Successfully loaded layers.0 weights.")
 
 def copy_base_model_weights(model):
@@ -402,8 +405,8 @@ if args.ckpt_path is not None:
     copy_base_model_weights(model)
     print(f"load model from {load_model_path}")
 
-
-
+from torch.nn.parallel import DistributedDataParallel as DDP
+    
 criterion = nn.SmoothL1Loss(reduction="none")
 optimizer = optim.AdamW(model.parameters(), lr=train_config["lr"], betas=(train_config["b1"], train_config["b2"]))
 
@@ -424,7 +427,9 @@ else:
         model, head, optimizer, train_loader, test_loader
     )
 
-
+unwrapped_model = accelerator.unwrap_model(model)
+model = torch.nn.parallel.DistributedDataParallel(unwrapped_model, find_unused_parameters=True)
+    
 for epoch in range(num_epochs + 1):
     top_3acc = [0 for _ in range(3)]
     correct = 0
