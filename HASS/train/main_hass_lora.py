@@ -261,15 +261,16 @@ def compute_loss(target, target_p, predict, loss_mask):
 
 @torch.no_grad()
 def getkacc(model, data, head, max_length=5):
+    # 仅在训练时的validation阶段使用
     def generate(hidden_states, input_ids, head, max_length=4, use_cache=True):
         if use_cache:
             past_key_values = None
             for i in range(max_length):
                 if past_key_values != None:
                     out_hidden, past_key_values = model(last_hidden, input_ids=token, past_key_values=past_key_values,
-                                                        use_cache=True)
+                                                        use_cache=True, forward_num=i)
                 else:
-                    out_hidden, past_key_values = model(hidden_states, input_ids=input_ids, use_cache=True)
+                    out_hidden, past_key_values = model(hidden_states, input_ids=input_ids, use_cache=True, forward_num=i)
                 last_hidden = out_hidden[:, -1:]
                 last_headout = head(last_hidden)
                 token = torch.argmax(last_headout, dim=-1)

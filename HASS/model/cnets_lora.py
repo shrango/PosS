@@ -496,7 +496,7 @@ def len_list(x, n):
 
 
 class Model(nn.Module):
-    def __init__(self, config, load_emb=False, path=None, bias=True, total_tokens=63, depth=5, top_k=8, threshold=1.0):
+    def __init__(self, config, load_emb=False, path=None, bias=True, total_tokens=63, depth=5, top_k=8, threshold=1.0, train_depth=None):
         super().__init__()
 
         self.gradient_checkpointing = True
@@ -528,13 +528,14 @@ class Model(nn.Module):
         self.top_k = top_k
         self.total_tokens = total_tokens - 1
         self.depth = depth
+        self.train_depth = train_depth if train_depth is not None else depth
         self.threshold = math.log(threshold)
         # print("total_tokens",total_tokens)
         # print("depth",depth)
         # print("top_k",top_k)
         # print("threshold",threshold)
 
-        self.layers = nn.ModuleList([LlamaDecoderLayer(config, index) for index in range(depth)])
+        self.layers = nn.ModuleList([LlamaDecoderLayer(config, index) for index in range(self.train_depth)])
         lora_config = LoraConfig(
             use_dora=True,
             r=8,  # LoRA rank
@@ -542,7 +543,7 @@ class Model(nn.Module):
             lora_dropout=0.0,
             target_modules=["q_proj", "v_proj", "attention.output.dense", "output.dense"], 
         )
-        for i in range(depth):
+        for i in range(self.train_depth):
             self.layers[i] = get_peft_model(self.layers[i], lora_config)
             self.layers[i].print_trainable_parameters()
 
@@ -755,7 +756,7 @@ class Model(nn.Module):
             position_ids = len_posi + self.position_ids
             # with Timer("draft one"):
             out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
-                                               position_ids=position_ids, use_cache=True)
+                                               position_ids=position_ids, use_cache=True, forward_num=i+1)
             len_posi += 1
 
             # with Timer("sort1"):
@@ -882,6 +883,7 @@ class Model(nn.Module):
 
     @torch.no_grad()
     def acc(self, data, head, max_length=5):
+        # 不知道在哪儿调用的
         hidden_states = data["hidden_states"]
         input_ids = data["input_ids"]
         # attention_mask=data["attention_mask"]
@@ -912,7 +914,7 @@ class Model(nn.Module):
                     tmp_sample_mask = sample_mask[i, single_hidden_states.shape[1] - 1]
                     if not (target_in_token == tmp_token):
                         break
-                    out_hidden = self(single_hidden_states, input_ids=single_input_ids)
+                    out_hidden = self(single_hidden_states, input_ids=single_input_ids, forward_num=k)
                     last_hidden = out_hidden[:, -1]
                     last_headout = head(last_hidden)
                     token = torch.argmax(last_headout)

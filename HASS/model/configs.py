@@ -93,6 +93,7 @@ class EConfig(PretrainedConfig):
         pretraining_tp=1,
         tie_word_embeddings=False,
         rope_scaling=None,
+        train_depth=1,
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -113,6 +114,7 @@ class EConfig(PretrainedConfig):
         self.pretraining_tp = pretraining_tp
         self.use_cache = use_cache
         self.rope_scaling = rope_scaling
+        self.train_depth = train_depth
         self._rope_scaling_validation()
 
         super().__init__(
