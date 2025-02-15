@@ -39,7 +39,7 @@ except:
     from utils_c import *
     from choices import *
     from utils import prepare_logits_processor
-
+import pdb
 
 
 
@@ -665,6 +665,7 @@ class Model(nn.Module):
                     use_reentrant=False
                 )
             else:
+                pdb.set_trace()
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,

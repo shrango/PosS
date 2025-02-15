@@ -14,7 +14,7 @@ from .modeling_llama_kv import LlamaForCausalLM as KVLlamaForCausalLM
 from .utils import *
 from .kv_cache import initialize_past_key_values
 
-from .cnets_lora import Model
+from .cnets import Model
 from .configs import EConfig
 
 
@@ -60,6 +60,7 @@ class EaModel(nn.Module):
 
         else:
             self.ea_layer.diff_device = False
+
         self.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
         self.ea_layer.to(self.base_model.dtype).to(device)
         self.ea_layer.init_tree()
