@@ -1,0 +1,30 @@
+2025-02-16 01:22:59,816 INFO    MainThread:38797 [wandb_setup.py:_flush():76] Current SDK version is 0.16.3
+2025-02-16 01:22:59,816 INFO    MainThread:38797 [wandb_setup.py:_flush():76] Configure stats pid to 38797
+2025-02-16 01:22:59,816 INFO    MainThread:38797 [wandb_setup.py:_flush():76] Loading settings from /home/jovyan/.config/wandb/settings
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_setup.py:_flush():76] Loading settings from /home/jovyan/workspace/my-eagle/HASS/wandb/settings
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2025-02-16 01:22:59,817 WARNING MainThread:38797 [wandb_setup.py:_flush():76] Could not find program at -m train.main_hass_lora
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': None, 'program': '-m train.main_hass_lora'}
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_setup.py:_flush():76] Applying login settings: {'api_key': '***REDACTED***'}
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_setup.py:_flush():76] Applying login settings: {'api_key': '***REDACTED***'}
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_init.py:_log_setup():526] Logging user logs to /home/jovyan/workspace/my-eagle/HASS/wandb/run-20250216_012259-tbepz4m6/logs/debug.log
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_init.py:_log_setup():527] Logging internal logs to /home/jovyan/workspace/my-eagle/HASS/wandb/run-20250216_012259-tbepz4m6/logs/debug-internal.log
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_init.py:init():566] calling init triggers
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_init.py:init():573] wandb.init called with sweep_config: {}
+config: {'lr': 3e-05, 'bs': 4, 'gradient_accumulation_steps': 1, 'datapath': '/home/jovyan/workspace/preprocess/sharegpt_0_67999_mufp16', 'is_warmup': True, 'num_epochs': 10, 'num_warmup_steps': 1776, 'total_steps': 177650, 'p_w': 0.1, 'v_w': 1.0, 'topk_w': 0.0, 'head_w': 0.1, 'num_workers': 2, 'embeding': True, 'act': 'No', 'data_noise': True, 'noise': 'uniform', 'mean': 0.0, 'std': 0.2, 'residual': 'true,norm', 'max_len': 2048, 'config_path': 'train/EAGLE-LLaMA3-Instruct-8B', 'b1': 0.9, 'b2': 0.95, 'grad_clip': 0.5, 'save_freq': 5}
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_init.py:init():616] starting backend
+2025-02-16 01:22:59,817 INFO    MainThread:38797 [wandb_init.py:init():620] setting up manager
+2025-02-16 01:22:59,821 INFO    MainThread:38797 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2025-02-16 01:22:59,822 INFO    MainThread:38797 [wandb_init.py:init():628] backend started and connected
+2025-02-16 01:22:59,827 INFO    MainThread:38797 [wandb_init.py:init():720] updated telemetry
+2025-02-16 01:22:59,855 INFO    MainThread:38797 [wandb_init.py:init():753] communicating run to backend with 90.0 second timeout
+2025-02-16 01:23:00,015 INFO    MainThread:38797 [wandb_run.py:_on_init():2262] communicating current version
+2025-02-16 01:23:00,046 INFO    MainThread:38797 [wandb_run.py:_on_init():2271] got version response upgrade_message: "wandb version 0.19.6 is available!  To upgrade, please run:\n $ pip install wandb --upgrade"
+
+2025-02-16 01:23:00,046 INFO    MainThread:38797 [wandb_init.py:init():804] starting run threads in backend
+2025-02-16 01:23:04,110 INFO    MainThread:38797 [wandb_run.py:_console_start():2241] atexit reg
+2025-02-16 01:23:04,110 INFO    MainThread:38797 [wandb_run.py:_redirect():2096] redirect: wrap_raw
+2025-02-16 01:23:04,110 INFO    MainThread:38797 [wandb_run.py:_redirect():2161] Wrapping output streams.
+2025-02-16 01:23:04,110 INFO    MainThread:38797 [wandb_run.py:_redirect():2186] Redirects installed.
+2025-02-16 01:23:04,111 INFO    MainThread:38797 [wandb_init.py:init():847] run started, returning control to user process
+2025-02-16 02:49:48,595 WARNING MsgRouterThr:38797 [router.py:message_loop():77] message_loop has been closed

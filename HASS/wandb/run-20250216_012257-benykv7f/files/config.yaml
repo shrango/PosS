@@ -1,0 +1,116 @@
+wandb_version: 1
+
+lr:
+  desc: null
+  value: 3.0e-05
+bs:
+  desc: null
+  value: 4
+gradient_accumulation_steps:
+  desc: null
+  value: 1
+datapath:
+  desc: null
+  value: /home/jovyan/workspace/preprocess/sharegpt_0_67999_mufp16
+is_warmup:
+  desc: null
+  value: true
+num_epochs:
+  desc: null
+  value: 10
+num_warmup_steps:
+  desc: null
+  value: 1776
+total_steps:
+  desc: null
+  value: 177650
+p_w:
+  desc: null
+  value: 0.1
+v_w:
+  desc: null
+  value: 1.0
+topk_w:
+  desc: null
+  value: 0.0
+head_w:
+  desc: null
+  value: 0.1
+num_workers:
+  desc: null
+  value: 2
+embeding:
+  desc: null
+  value: true
+act:
+  desc: null
+  value: 'No'
+data_noise:
+  desc: null
+  value: true
+noise:
+  desc: null
+  value: uniform
+mean:
+  desc: null
+  value: 0.0
+std:
+  desc: null
+  value: 0.2
+residual:
+  desc: null
+  value: true,norm
+max_len:
+  desc: null
+  value: 2048
+config_path:
+  desc: null
+  value: train/EAGLE-LLaMA3-Instruct-8B
+b1:
+  desc: null
+  value: 0.9
+b2:
+  desc: null
+  value: 0.95
+grad_clip:
+  desc: null
+  value: 0.5
+save_freq:
+  desc: null
+  value: 5
+_wandb:
+  desc: null
+  value:
+    python_version: 3.12.7
+    cli_version: 0.16.3
+    framework: huggingface
+    huggingface_version: 4.40.0
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1739668977.164625
+    t:
+      1:
+      - 1
+      - 11
+      - 49
+      - 55
+      - 71
+      - 98
+      - 105
+      2:
+      - 1
+      - 11
+      - 49
+      - 55
+      - 71
+      - 98
+      - 105
+      3:
+      - 16
+      - 23
+      4: 3.12.7
+      5: 0.16.3
+      6: 4.40.0
+      8:
+      - 5
+      13: linux-x86_64
