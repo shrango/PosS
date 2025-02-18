@@ -395,8 +395,8 @@ class LlamaDecoderLayer(nn.Module):
         self.self_attn = LlamaAttention(config=config)
         self.mlp = LlamaMLP(config)
         self.index = index
-        if self.index != 0:
-            self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        # if self.index != 0:
+        #     self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
@@ -424,8 +424,8 @@ class LlamaDecoderLayer(nn.Module):
 
         residual = hidden_states
 
-        if self.index != 0:
-            hidden_states = self.input_layernorm(hidden_states)
+        # if self.index != 0:
+        #     hidden_states = self.input_layernorm(hidden_states)
 
         # Self Attention
         hidden_states, self_attn_weights, present_key_value = self.self_attn(
