@@ -14,7 +14,7 @@ from .modeling_llama_kv import LlamaForCausalLM as KVLlamaForCausalLM
 from .utils import *
 from .kv_cache import initialize_past_key_values
 
-from .cnets import Model
+from .cnets_lora_gen import Model
 from .configs import EConfig
 
 
