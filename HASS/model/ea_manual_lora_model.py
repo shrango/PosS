@@ -14,7 +14,7 @@ from .modeling_llama_kv import LlamaForCausalLM as KVLlamaForCausalLM
 from .utils import *
 from .kv_cache import initialize_past_key_values
 
-from .cnets_lora_gen import Model
+from .cnets_manual_lora_gen import Model
 from .configs import EConfig
 
 class EaModel(nn.Module):
@@ -45,7 +45,7 @@ class EaModel(nn.Module):
             bias=con["bias"]
         except:
             bias=True
-        self.ea_layer = Model(config,bias=bias,total_tokens=total_token,depth=depth,top_k=top_k,threshold=threshold, train_depth=config.train_depth)
+        self.ea_layer = Model(config,bias=bias,total_tokens=total_token,depth=depth,top_k=top_k,threshold=threshold,forward_num_total=depth)
 
         low_memory=False
 
@@ -59,8 +59,7 @@ class EaModel(nn.Module):
 
         else:
             self.ea_layer.diff_device = False
-
-        self.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
+        self.ea_layer.load_state_dict(ea_layer_state_dict, strict=False)
         self.ea_layer.to(self.base_model.dtype).to(device)
         self.ea_layer.init_tree()
 
@@ -126,6 +125,8 @@ class EaModel(nn.Module):
             ea_layer_state_dict
         )
 
+
+
         if total_token==-1:
             device = model.base_model.model.layers[0].self_attn.q_proj.weight.device
             cans=[40,48,50,56,60]
@@ -147,6 +148,9 @@ class EaModel(nn.Module):
                 times.append((end_time - start_time) / x[i])
             total_token=cans[times.index(min(times))]
             model.ea_layer.total_tokens=total_token-1
+
+
+
 
         return model
 
