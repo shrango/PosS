@@ -502,10 +502,10 @@ class Model(nn.Module):
         self.total_tokens = total_tokens - 1
         self.depth = depth
         self.threshold = math.log(threshold)
-        # print("total_tokens",total_tokens)
-        # print("depth",depth)
-        # print("top_k",top_k)
-        # print("threshold",threshold)
+        print("total_tokens",total_tokens)
+        print("depth",depth)
+        print("top_k",top_k)
+        print("threshold",threshold)
 
         self.forward_num_total = forward_num_total
         print(f"forward_num_total: {forward_num_total}")

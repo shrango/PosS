@@ -40,7 +40,7 @@ except:
     from choices import *
     from utils import prepare_logits_processor
 
-
+import pdb
 
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
@@ -197,13 +197,37 @@ class DoraLinearLayer(nn.Module):
         self.dropout_layer = nn.Dropout(lora_dropout) if lora_dropout > 0.0 else nn.Identity()
         self.lora_A = nn.Linear(self.in_feature, self.lora_rank, bias=False)
         self.lora_B = nn.Linear(self.lora_rank, self.out_feature, bias=lora_bias)
-        self.magnitude = nn.Parameter(torch.ones(1))
+        self.magnitude = nn.Parameter(torch.ones(out_feature))
+        self.mag_norm_scale = None
+    
+    def cal_mag_norm_scale(self, base_layer):
+        x_eye = torch.eye(self.lora_A.weight.shape[1], device=self.lora_A.weight.device, dtype=self.lora_A.weight.dtype)
+        lora_weight = self.lora_B(self.lora_A(x_eye)).T
+
+        weight = base_layer.weight
+        
+        weight_norm = self.get_weight_norm(weight, lora_weight.detach(), self.scaling)
+        # see section 4.3 of DoRA (https://arxiv.org/abs/2402.09353)
+        # "[...] we suggest treating ||V +∆V ||_c in
+        # Eq. (5) as a constant, thereby detaching it from the gradient
+        # graph. This means that while ||V + ∆V ||_c dynamically
+        # reflects the updates of ∆V , it won’t receive any gradient
+        # during backpropagation"
+        weight_norm = weight_norm.detach()
+        self.mag_norm_scale = (self.magnitude / weight_norm).view(1, -1).to(self.lora_A.weight.device)
     
     def get_weight_norm(self, weight, lora_weight, scaling) -> torch.Tensor:
         # calculate L2 norm of weight matrix, column-wise
         weight = weight + scaling * lora_weight
         weight_norm = torch.linalg.norm(weight, dim=1).to(weight.dtype)
         return weight_norm
+    
+    def forward_inference(self, x, base_result):
+        lora_result = self.lora_B(self.lora_A(x))
+
+        result_dora = self.mag_norm_scale * (lora_result * self.scaling + base_result)
+
+        return result_dora
 
     def forward(self, x, base_layer, base_result=None):
         """
@@ -268,6 +292,7 @@ class LlamaAttention(nn.Module):
             self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.qkv_bias)
             self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.qkv_bias)
             self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.qkv_bias)
+            print("warning: qkv bias might cause inaccuracy!")
         else:
             self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=False)
             self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
@@ -292,6 +317,17 @@ class LlamaAttention(nn.Module):
         self.v_doras = nn.ModuleList([DoraLinearLayer(in_feature=dora_config["in_feature"], out_feature=self.num_key_value_heads * self.head_dim, lora_rank=dora_config["lora_rank"], lora_alpha=dora_config["lora_alpha"], lora_dropout=dora_config["lora_dropout"], lora_bias=dora_config["lora_bias"]) for _ in range(lora_layer_num)])
 
         self.o_doras = nn.ModuleList([DoraLinearLayer(in_feature=self.num_heads * self.head_dim, out_feature=self.hidden_size, lora_rank=dora_config["lora_rank"], lora_alpha=dora_config["lora_alpha"], lora_dropout=dora_config["lora_dropout"], lora_bias=dora_config["lora_bias"]) for _ in range(lora_layer_num)])
+    
+    def pre_cal_dora_magnitude(self):
+        for layer in self.q_doras:
+            layer.cal_mag_norm_scale(self.q_proj)
+        for layer in self.k_doras:
+            layer.cal_mag_norm_scale(self.k_proj)
+        for layer in self.v_doras:
+            layer.cal_mag_norm_scale(self.v_proj)
+        for layer in self.o_doras:
+            layer.cal_mag_norm_scale(self.o_proj)
+
     def _init_rope(self):
         if self.config.rope_scaling is None:
             if hasattr(self.config, "rope_theta"):
@@ -352,16 +388,13 @@ class LlamaAttention(nn.Module):
         else:
             query_states = self.q_proj(hidden_states)
             if lora_layer >= 0:
-                query_states_dora = self.q_doras[lora_layer](hidden_states, self.q_proj, base_result=query_states)
-                query_states = query_states + query_states_dora
+                query_states = self.q_doras[lora_layer].forward_inference(hidden_states, base_result=query_states)
             key_states = self.k_proj(hidden_states)
             if lora_layer >= 0:
-                key_states_dora = self.k_doras[lora_layer](hidden_states, self.k_proj, base_result=key_states)
-                key_states = key_states + key_states_dora
+                key_states = self.k_doras[lora_layer].forward_inference(hidden_states, base_result=key_states)
             value_states = self.v_proj(hidden_states)
             if lora_layer >= 0:
-                value_states_dora = self.v_doras[lora_layer](hidden_states, self.v_proj, base_result=value_states)
-                value_states = value_states + value_states_dora
+                value_states = self.v_doras[lora_layer].forward_inference(hidden_states, base_result=value_states)
 
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
@@ -421,8 +454,7 @@ class LlamaAttention(nn.Module):
         else:
             attn_output = self.o_proj(attn_output)
             if lora_layer >= 0:
-                attn_output_dora = self.o_doras[lora_layer](attn_output, self.o_proj, base_result=attn_output)
-                attn_output = attn_output + attn_output_dora
+                attn_output = self.o_doras[lora_layer].forward_inference(attn_output, base_result=attn_output)
 
         if not output_attentions:
             attn_weights = None

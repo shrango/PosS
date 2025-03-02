@@ -65,6 +65,7 @@ class EaModel(nn.Module):
             self.ea_layer.diff_device = False
         self.ea_layer.load_state_dict(ea_layer_state_dict, strict=False)
         self.ea_layer.to(self.base_model.dtype).to(device)
+        self.ea_layer.layers[0].self_attn.pre_cal_dora_magnitude()
         self.ea_layer.init_tree()
 
     def get_tokenizer(self):
