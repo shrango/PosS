@@ -249,6 +249,7 @@ class EaModel(nn.Module):
             draft_tokens=draft_tokens.to(input_ids.device)
             #with Timer("tree_decoding"):
             logits, hidden_state_new, outputs = tree_decoding(
+                # hidden_state_new comes from the target model
                 self,
                 draft_tokens,
                 past_key_values,

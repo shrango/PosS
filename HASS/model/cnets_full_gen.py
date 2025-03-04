@@ -39,7 +39,7 @@ except:
     from utils_c import *
     from choices import *
     from utils import prepare_logits_processor
-
+import pdb
 
 
 
@@ -654,12 +654,13 @@ class Model(nn.Module):
             next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
 
         if use_cache:
-            return hidden_states, next_decoder_cache
+            return hidden_states, next_decoder_cache, position_ids
 
         return hidden_states
 
     def reset_kv(self):
-        self.stable_kv = None
+        # self.stable_kv = None
+        self.stable_kv = [None for _ in range(self.forward_num_total)]
 
     @torch.no_grad()
     def topK_genrate(self, hidden_states, input_ids, head, logits_processor):
@@ -682,13 +683,13 @@ class Model(nn.Module):
         self.reset()
 
         # with Timer("draft many"):
-        if hasattr(self, "stable_kv") and self.stable_kv is not None:
-            kv_len = self.stable_kv[0][0].shape[2]
-            out_hidden, past_key_values = self(hidden_states, input_ids=input_ids[:, kv_len:],
-                                               past_key_values=self.stable_kv, use_cache=True, forward_num=0)
+        if hasattr(self, "stable_kv") and self.stable_kv[0] is not None:
+            kv_len = self.stable_kv[0][0][0].shape[2]
+            out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids[:, kv_len:],
+                                               past_key_values=self.stable_kv[0], use_cache=True, forward_num=0)
         else:
-            out_hidden, past_key_values = self(hidden_states, input_ids=input_ids, use_cache=True, forward_num=0)
-        self.stable_kv = past_key_values
+            out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids, use_cache=True, forward_num=0)
+        self.stable_kv[0] = past_key_values
         last_hidden = out_hidden[:, -1]
 
         last_headout = head(last_hidden)
@@ -700,18 +701,34 @@ class Model(nn.Module):
         scores_list.append(scores[None])
         parents_list.append(torch.zeros(1, dtype=torch.long, device=scores.device))
         ss_token.append(topk_index)
-        input_ids = topk_index
+        # input_ids = topk_index
+        input_ids = torch.cat((input_ids, topk_index), dim=1)
         input_hidden = last_hidden[None].repeat(1, top_k, 1)
+        mid_hidden_states = torch.cat((hidden_states, input_hidden), dim=1)
         tree_mask = self.tree_mask_init
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
 
         # 4
         for i in range(depth):
+            current_layer = 1 + i
             self.tree_mask = tree_mask
-            position_ids = len_posi + self.position_ids
+            new_position_ids = len_posi + self.position_ids
+            position_ids = torch.cat((position_ids.squeeze(0), new_position_ids), dim=0)
+            
             # with Timer("draft one"):
-            out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
-                                               position_ids=position_ids, use_cache=True, forward_num=1+i)
+            if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
+                kv_len = self.stable_kv[current_layer][0][0].shape[2]
+                # pdb.set_trace()
+                out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
+                                               past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_num=current_layer)
+            else:
+                # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
+                                            #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
+                out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_num=current_layer)
+            
+            out_hidden = out_hidden[:, -top_k:]
+            self.stable_kv[current_layer] = ((past_key_values[0][0][:,:,:self.stable_kv[0][0][0].shape[2],:], past_key_values[0][1][:,:,:self.stable_kv[0][0][1].shape[2],:]),)
+
             len_posi += 1
 
             # with Timer("sort1"):
@@ -739,7 +756,10 @@ class Model(nn.Module):
             #     in_ids = topk_cs_index % top_k
             #     input_ids = topk_index[out_ids, in_ids][None]
             # with Timer("1index"):
-            input_ids = topk_index.view(-1)[topk_cs_index][None]
+            mid_hidden_states = torch.cat((mid_hidden_states, input_hidden), dim=1)
+            # input_ids = topk_index.view(-1)[topk_cs_index][None]
+            new_token = topk_index.view(-1)[topk_cs_index][None]
+            input_ids = torch.cat((input_ids, new_token), dim=1)
             # print(input_ids.equal(input_ids0))
 
             ss_token.append(topk_index)
