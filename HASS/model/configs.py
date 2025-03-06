@@ -94,6 +94,7 @@ class EConfig(PretrainedConfig):
         tie_word_embeddings=False,
         rope_scaling=None,
         train_depth=1,
+        draft_model_size="standard",
         **kwargs,
     ):
         self.vocab_size = vocab_size
@@ -116,6 +117,27 @@ class EConfig(PretrainedConfig):
         self.rope_scaling = rope_scaling
         self.train_depth = train_depth
         self._rope_scaling_validation()
+
+        if draft_model_size=="standard":
+            self.draft_hidden_size = hidden_size
+            self.draft_num_attention_heads = num_attention_heads
+            self.draft_num_key_value_heads = num_attention_heads
+            self.draft_intermediate_size = intermediate_size
+        elif draft_model_size=="tiny":
+            self.draft_hidden_size = 768
+            self.draft_num_attention_heads = 12
+            self.draft_num_key_value_heads = 12
+            self.draft_intermediate_size = 3072
+        elif draft_model_size=="small":
+            self.draft_hidden_size = 1024
+            self.draft_num_attention_heads = 16
+            self.draft_num_key_value_heads = 8
+            self.draft_intermediate_size = 4096
+        elif draft_model_size=="medium":
+            self.draft_hidden_size = 2048
+            self.draft_num_attention_heads = 24
+            self.draft_num_key_value_heads = 12
+            self.draft_intermediate_size = 8192
 
         super().__init__(
             pad_token_id=pad_token_id,

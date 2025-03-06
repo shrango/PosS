@@ -343,7 +343,7 @@ if accelerator.is_main_process:
         os.makedirs(args.cpdir)
 
 config = EConfig.from_pretrained(train_config["config_path"])
-model = Model(config, load_emb=True, path=args.basepath, forward_num_total=args.forward_num_total, position_per_layer=arg.position_per_layer)
+model = Model(config, load_emb=True, path=args.basepath, forward_num_total=args.forward_num_total, position_per_layer=args.position_per_layer)
 
 
 if args.ckpt_path is not None: 
