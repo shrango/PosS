@@ -735,10 +735,10 @@ class Model(nn.Module):
             #     out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
             pdb.set_trace()
             if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
-                # 有stable_kv不见得就是走这里；当且仅当整个topK_generate是第一次被调用，并且i%self.position_per_layer!=0的时候，其实应该走下面的
+                # 有stable_kv不见得就是走这里；当且仅当整个topK_generate是第一次被调用，并且i%self.position_per_layer!=0的时候
                 kv_len = self.stable_kv[current_layer][0][0].shape[2]
                 # pdb.set_trace()
-                if first_round==True and i%self.position_per_layer!=0:
+                if first_round==True:
                     out_hidden, past_key_values, _ = self(input_hidden, input_ids=new_token, past_key_values=past_key_values,
                                                position_ids=new_position_ids, use_cache=True)
                 else:
