@@ -684,15 +684,15 @@ class Model(nn.Module):
         len_posi = input_ids.shape[1]
         self.reset()
 
+        first_round = [False for _ in range(self.layer_num)]
         # with Timer("draft many"):
         if hasattr(self, "stable_kv") and self.stable_kv[0] is not None:
             kv_len = self.stable_kv[0][0][0].shape[2]
             out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids[:, kv_len:],
                                                past_key_values=self.stable_kv[0], use_cache=True, forward_layer=0)
-            first_round = False
         else:
             out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids, use_cache=True, forward_layer=0)
-            first_round = True
+            first_round[0] = True
         self.stable_kv[0] = past_key_values
         last_hidden = out_hidden[:, -1]
 
@@ -726,10 +726,9 @@ class Model(nn.Module):
             if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
                 kv_len = self.stable_kv[current_layer][0][0].shape[2]
                 # pdb.set_trace()
-                if first_round:
+                if first_round[current_layer]:
                     out_hidden, past_key_values, _ = self(mid_hidden_states[:,kv_len:,:], input_ids=input_ids[:, kv_len:],
                                                 past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
-                    
                 else:
                     out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
                                                 past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer)
@@ -737,6 +736,7 @@ class Model(nn.Module):
                 # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
                                             #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
                 out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer)
+                first_round[current_layer] = True
             
             out_hidden = out_hidden[:, -top_k:]
             self.stable_kv[current_layer] = ((past_key_values[0][0][:,:,:self.stable_kv[0][0][0].shape[2],:], past_key_values[0][1][:,:,:self.stable_kv[0][0][1].shape[2],:]),)
