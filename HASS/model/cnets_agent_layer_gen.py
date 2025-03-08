@@ -718,6 +718,7 @@ class Model(nn.Module):
             position_ids = torch.cat((position_ids.squeeze(0), new_position_ids), dim=0)
             
             # with Timer("draft one"):
+            pdb.set_trace()
             if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
                 kv_len = self.stable_kv[current_layer][0][0].shape[2]
                 # pdb.set_trace()
