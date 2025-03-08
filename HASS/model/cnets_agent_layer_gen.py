@@ -715,7 +715,7 @@ class Model(nn.Module):
         mid_hidden_states = torch.cat((hidden_states, input_hidden), dim=1)
         tree_mask = self.tree_mask_init
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
-        pdb.set_trace()
+
         position_ids = position_ids.squeeze(0)
         for i in range(depth):
             current_layer = (1 + i)//self.position_per_layer
@@ -733,7 +733,6 @@ class Model(nn.Module):
             #     # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
             #                                 #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
             #     out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
-            pdb.set_trace()
             if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
                 # 有3种情况会走这里：
                 # 1. 虽然topK_generate是第一次被调用，但是(i+1)%self.position_per_layer!=0，这个时候的stable_kv不是它生成的，而是前一个pos生成的，可以直接用past_key_values
@@ -741,7 +740,7 @@ class Model(nn.Module):
                 # 3. topK_generate被第二次调用开始，并且(i+1)%self.position_per_layer!=0，这个时候的stable_kv不是它生成的，而是前一个pos生成的，可以直接用past_key_values
                 # 有stable_kv不见得就是走这里；当且仅当整个topK_generate是第一次被调用，并且i%self.position_per_layer!=0的时候
                 kv_len = self.stable_kv[current_layer][0][0].shape[2]
-                # pdb.set_trace()
+
                 if first_round==True:
                     out_hidden, past_key_values, _ = self(input_hidden, input_ids=new_token, past_key_values=past_key_values,
                                                position_ids=new_position_ids, use_cache=True)
