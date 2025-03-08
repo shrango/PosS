@@ -724,11 +724,11 @@ class Model(nn.Module):
                 kv_len = self.stable_kv[current_layer][0][0].shape[2]
                 # pdb.set_trace()
                 out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
-                                               past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_num=current_layer//self.position_per_layer)
+                                               past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
             else:
                 # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
                                             #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
-                out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_num=current_layer//self.position_per_layer)
+                out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
         # pdb.set_trace()
         # position_ids = position_ids.squeeze(0)
         # # 4
