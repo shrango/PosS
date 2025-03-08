@@ -710,6 +710,7 @@ class Model(nn.Module):
         tree_mask = self.tree_mask_init
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
 
+        position_ids = position_ids.squeeze(0)
         # 4
         for i in range(depth):
             current_layer = (1 + i)//self.position_per_layer
