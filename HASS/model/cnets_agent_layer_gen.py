@@ -663,8 +663,8 @@ class Model(nn.Module):
 
     def reset_kv(self):
         # self.stable_kv = None
-        # self.stable_kv = [None for _ in range(self.layer_num)]
-        self.stable_kv = [None for _ in range(self.forward_num_total)]
+        self.stable_kv = [None for _ in range(self.layer_num)]
+        # self.stable_kv = [None for _ in range(self.forward_num_total)]
 
     @torch.no_grad()
     def topK_genrate(self, hidden_states, input_ids, head, logits_processor):
@@ -716,7 +716,7 @@ class Model(nn.Module):
         tree_mask = self.tree_mask_init
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
         for i in range(depth):
-            current_layer = 1 + i
+            current_layer = (1 + i)//self.position_per_layer
             self.tree_mask = tree_mask
             new_position_ids = len_posi + self.position_ids
             position_ids = torch.cat((position_ids.squeeze(0), new_position_ids), dim=0)
@@ -739,11 +739,11 @@ class Model(nn.Module):
                     out_hidden, past_key_values, _ = self(input_hidden, input_ids=new_token, past_key_values=past_key_values,
                                                position_ids=position_ids, use_cache=True)
                 out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
-                                               past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
+                                               past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer)
             else:
                 # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
                                             #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
-                out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
+                out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer)
 
             out_hidden = out_hidden[:, -top_k:]
             self.stable_kv[current_layer] = ((past_key_values[0][0][:,:,:self.stable_kv[0][0][0].shape[2],:], past_key_values[0][1][:,:,:self.stable_kv[0][0][1].shape[2],:]),)
