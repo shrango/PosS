@@ -716,7 +716,7 @@ class Model(nn.Module):
             current_layer = (1 + i)//self.position_per_layer
             self.tree_mask = tree_mask
             new_position_ids = len_posi + self.position_ids
-            position_ids = torch.cat((position_ids, new_position_ids), dim=0)
+            
             
             # with Timer("draft one"):
             pdb.set_trace()
@@ -725,11 +725,13 @@ class Model(nn.Module):
                 # pdb.set_trace()
                 if mid_hidden_states.shape[1] < kv_len:
                     out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
-                                                past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer)
+                                                past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
                 else:
                     out_hidden, past_key_values, _ = self(mid_hidden_states[:,kv_len:,:], input_ids=input_ids[:, kv_len:],
-                                                past_key_values=self.stable_kv[current_layer], position_ids=position_ids[kv_len:], use_cache=True, forward_layer=current_layer)
+                                                past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
             else:
+                # 只有在没有kv的情况下才会用完整的position_ids
+                position_ids = torch.cat((position_ids, new_position_ids), dim=0)
                 # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
                                             #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
                 out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer)
