@@ -751,7 +751,7 @@ class Model(nn.Module):
                     #                             past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
                     if (i+1)%self.position_per_layer==0:
                         out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
-                                               past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
+                                               past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer)
                     else:
                         out_hidden, past_key_values, _ = self(input_hidden, input_ids=new_token,
                                                 past_key_values=past_key_values, position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
