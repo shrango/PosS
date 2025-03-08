@@ -119,7 +119,8 @@ def get_model_answers(
         low_cpu_mem_usage=True,
         # load_in_8bit=True,
         device_map="auto",
-        forward_num_total=args.forward_num_total
+        forward_num_total=args.forward_num_total,
+        position_per_layer=args.position_per_layer,
     )
 
     tokenizer = model.get_tokenizer()
@@ -424,6 +425,12 @@ if __name__ == "__main__":
         "--forward_num_total",
         type=int,
         default=5,
+    )
+
+    parser.add_argument(
+        "--position_per_layer",
+        type=int,
+        default=1,
     )
 
     args = parser.parse_args()

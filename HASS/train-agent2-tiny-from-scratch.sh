@@ -10,7 +10,7 @@ BasePath=/storage1/jiaxinh/Active/models_cache/models--meta-llama--Meta-Llama-3-
 # restore_from=/home/jovyan/workspace/project/llama3/standard/checkpoint/state_20
 #     --ckpt_path $restore_from \
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --main_process_port 29501 -m --mixed_precision=bf16 train.main_agent_layer \
+CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --main_process_port 29501 -m --mixed_precision=bf16 train.main_agent_hetero_layer \
     --basepath $BasePath \
     --tmpdir $prep \
     --cpdir $ckpt \
@@ -20,6 +20,6 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --main_process_port 29501 -m --mi
     --topk 10 \
     --topk_w 0 \
     --lr 3e-5 \
-    --forward_num_total 10 \
+    --forward_num_total 12 \
     --position_per_layer 2 \
     --draft_model_size "small"
