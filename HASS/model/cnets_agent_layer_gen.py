@@ -692,9 +692,10 @@ class Model(nn.Module):
             kv_len = self.stable_kv[0][0][0].shape[2]
             out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids[:, kv_len:],
                                                past_key_values=self.stable_kv[0], use_cache=True, forward_layer=0)
+            first_round = False
         else:
             out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids, use_cache=True, forward_layer=0)
-            # first_round[0] = True
+            first_round = True
         self.stable_kv[0] = past_key_values
         last_hidden = out_hidden[:, -1]
 
@@ -708,6 +709,7 @@ class Model(nn.Module):
         parents_list.append(torch.zeros(1, dtype=torch.long, device=scores.device))
         ss_token.append(topk_index)
         # input_ids = topk_index
+        new_token = topk_index
         input_ids = torch.cat((input_ids, topk_index), dim=1)
         input_hidden = last_hidden[None].repeat(1, top_k, 1)
         mid_hidden_states = torch.cat((hidden_states, input_hidden), dim=1)
@@ -720,42 +722,29 @@ class Model(nn.Module):
             position_ids = torch.cat((position_ids.squeeze(0), new_position_ids), dim=0)
             
             # with Timer("draft one"):
+            # if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
+            #     kv_len = self.stable_kv[current_layer][0][0].shape[2]
+            #     # pdb.set_trace()
+            #     out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
+            #                                    past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
+            # else:
+            #     # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
+            #                                 #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
+            #     out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
             if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
+                # 有stable_kv不见得就是走这里；当且仅当整个topK_generate是第一次被调用，并且i%self.position_per_layer!=0的时候，其实应该走下面的
                 kv_len = self.stable_kv[current_layer][0][0].shape[2]
                 # pdb.set_trace()
+                if first_round==True and i%self.position_per_layer!=0:
+                    out_hidden, past_key_values, _ = self(input_hidden, input_ids=new_token, past_key_values=past_key_values,
+                                               position_ids=position_ids, use_cache=True)
                 out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
                                                past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
             else:
                 # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
                                             #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
                 out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer//self.position_per_layer)
-        # pdb.set_trace()
-        # position_ids = position_ids.squeeze(0)
-        # # 4
-        # for i in range(depth):
-        #     current_layer = (1 + i)//self.position_per_layer
-        #     self.tree_mask = tree_mask
-        #     new_position_ids = len_posi + self.position_ids
-        #     # 只有在没有kv的情况下才会用完整的position_ids
-        #     position_ids = torch.cat((position_ids, new_position_ids), dim=0)
-            
-        #     # with Timer("draft one"):
-        #     pdb.set_trace()
-        #     if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
-        #         kv_len = self.stable_kv[current_layer][0][0].shape[2]
-        #         # pdb.set_trace()
-        #         if first_round[current_layer]:
-        #             out_hidden, past_key_values, _ = self(mid_hidden_states[:,kv_len:,:], input_ids=input_ids[:, kv_len:],
-        #                                         past_key_values=self.stable_kv[current_layer], position_ids=position_ids[kv_len:], use_cache=True, forward_layer=current_layer)
-        #         else:
-        #             out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
-        #                                         past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer)
-        #     else:
-        #         # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
-        #                                     #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
-        #         out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_layer=current_layer)
-        #         first_round[current_layer] = True
-            
+
             out_hidden = out_hidden[:, -top_k:]
             self.stable_kv[current_layer] = ((past_key_values[0][0][:,:,:self.stable_kv[0][0][0].shape[2],:], past_key_values[0][1][:,:,:self.stable_kv[0][0][1].shape[2],:]),)
 
