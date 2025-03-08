@@ -728,7 +728,7 @@ class Model(nn.Module):
                 # pdb.set_trace()
                 if first_round[current_layer]:
                     out_hidden, past_key_values, _ = self(mid_hidden_states[:,kv_len:,:], input_ids=input_ids[:, kv_len:],
-                                                past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
+                                                past_key_values=self.stable_kv[current_layer], position_ids=position_ids[kv_len:], use_cache=True, forward_layer=current_layer)
                 else:
                     out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
                                                 past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer)
