@@ -709,7 +709,7 @@ class Model(nn.Module):
         mid_hidden_states = torch.cat((hidden_states, input_hidden), dim=1)
         tree_mask = self.tree_mask_init
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
-
+        pdb.set_trace()
         position_ids = position_ids.squeeze(0)
         # 4
         for i in range(depth):
