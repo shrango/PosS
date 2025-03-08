@@ -740,8 +740,9 @@ class Model(nn.Module):
                 # pdb.set_trace()
                 if first_round==True and i%self.position_per_layer!=0:
                     out_hidden, past_key_values, _ = self(input_hidden, input_ids=new_token, past_key_values=past_key_values,
-                                               position_ids=position_ids, use_cache=True)
+                                               position_ids=new_position_ids, use_cache=True)
                 else:
+                    # 这条被调用只有一种情况：是topK_generate被第二次调用开始
                     out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
                                                 past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
             else:
