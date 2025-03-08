@@ -689,8 +689,10 @@ class Model(nn.Module):
             kv_len = self.stable_kv[0][0][0].shape[2]
             out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids[:, kv_len:],
                                                past_key_values=self.stable_kv[0], use_cache=True, forward_layer=0)
+            first_round = False
         else:
             out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids, use_cache=True, forward_layer=0)
+            first_round = True
         self.stable_kv[0] = past_key_values
         last_hidden = out_hidden[:, -1]
 
@@ -724,12 +726,13 @@ class Model(nn.Module):
             if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
                 kv_len = self.stable_kv[current_layer][0][0].shape[2]
                 # pdb.set_trace()
-                if mid_hidden_states.shape[1] < kv_len:
-                    out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
-                                                past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
-                else:
+                if first_round:
                     out_hidden, past_key_values, _ = self(mid_hidden_states[:,kv_len:,:], input_ids=input_ids[:, kv_len:],
                                                 past_key_values=self.stable_kv[current_layer], position_ids=new_position_ids, use_cache=True, forward_layer=current_layer)
+                    
+                else:
+                    out_hidden, past_key_values, _ = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
+                                                past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_layer=current_layer)
             else:
                 # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
                                             #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
