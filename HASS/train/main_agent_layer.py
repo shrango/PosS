@@ -17,6 +17,7 @@ parser.add_argument('--ckpt_path', type=str, default=None)
 parser.add_argument('--data_num', type=int, default=68000)
 parser.add_argument('--debug', action='store_true')
 parser.add_argument('--position_per_layer', type=int, default=1)
+parser.add_argument('--draft_model_size', type=str, default="standard")
 
 args = parser.parse_args()
 
@@ -343,6 +344,7 @@ if accelerator.is_main_process:
         os.makedirs(args.cpdir)
 
 config = EConfig.from_pretrained(train_config["config_path"])
+config.update_draft_config(args.draft_model_size)
 model = Model(config, load_emb=True, path=args.basepath, forward_num_total=args.forward_num_total, position_per_layer=args.position_per_layer)
 
 

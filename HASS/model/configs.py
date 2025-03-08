@@ -118,12 +118,41 @@ class EConfig(PretrainedConfig):
         self.train_depth = train_depth
         self._rope_scaling_validation()
 
-        if draft_model_size=="standard":
-            self.draft_hidden_size = hidden_size
-            self.draft_num_attention_heads = num_attention_heads
-            self.draft_num_key_value_heads = num_attention_heads
-            self.draft_intermediate_size = intermediate_size
-        elif draft_model_size=="tiny":
+        self.draft_hidden_size = hidden_size
+        self.draft_num_attention_heads = num_attention_heads
+        self.draft_num_key_value_heads = num_attention_heads
+        self.draft_intermediate_size = intermediate_size
+        # if draft_model_size=="standard":
+        #     self.draft_hidden_size = hidden_size
+        #     self.draft_num_attention_heads = num_attention_heads
+        #     self.draft_num_key_value_heads = num_attention_heads
+        #     self.draft_intermediate_size = intermediate_size
+        # elif draft_model_size=="tiny":
+        #     self.draft_hidden_size = 768
+        #     self.draft_num_attention_heads = 12
+        #     self.draft_num_key_value_heads = 12
+        #     self.draft_intermediate_size = 3072
+        # elif draft_model_size=="small":
+        #     self.draft_hidden_size = 1024
+        #     self.draft_num_attention_heads = 16
+        #     self.draft_num_key_value_heads = 8
+        #     self.draft_intermediate_size = 4096
+        # elif draft_model_size=="medium":
+        #     self.draft_hidden_size = 2048
+        #     self.draft_num_attention_heads = 24
+        #     self.draft_num_key_value_heads = 12
+        #     self.draft_intermediate_size = 8192
+
+        super().__init__(
+            pad_token_id=pad_token_id,
+            bos_token_id=bos_token_id,
+            eos_token_id=eos_token_id,
+            tie_word_embeddings=tie_word_embeddings,
+            **kwargs,
+        )
+
+    def update_draft_config(self, draft_model_size):
+        if draft_model_size=="tiny":
             self.draft_hidden_size = 768
             self.draft_num_attention_heads = 12
             self.draft_num_key_value_heads = 12
@@ -138,14 +167,8 @@ class EConfig(PretrainedConfig):
             self.draft_num_attention_heads = 24
             self.draft_num_key_value_heads = 12
             self.draft_intermediate_size = 8192
-
-        super().__init__(
-            pad_token_id=pad_token_id,
-            bos_token_id=bos_token_id,
-            eos_token_id=eos_token_id,
-            tie_word_embeddings=tie_word_embeddings,
-            **kwargs,
-        )
+        else:
+            return
 
     def _rope_scaling_validation(self):
         """

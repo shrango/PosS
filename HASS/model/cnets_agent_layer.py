@@ -543,6 +543,7 @@ class Model(nn.Module):
         self.logsoftmax = nn.LogSoftmax(dim=-1)
         for param in self.embed_tokens.parameters():
             param.requires_grad = False
+        self.hidden_states_projection = nn.Linear(config.draft_hidden_size, config.hidden_size, bias=bias)
 
     def init_tree(self):
         self.tree_mask_init = torch.eye(self.top_k, device=self.embed_tokens.weight.device)[None, None]
@@ -694,6 +695,8 @@ class Model(nn.Module):
 
         hidden_states = layer_outputs[0]
 
+        hidden_states = self.hidden_states_projection(hidden_states)
+        
         if use_cache:
             next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
 
