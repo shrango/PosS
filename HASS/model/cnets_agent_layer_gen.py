@@ -81,11 +81,11 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
     This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
     num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)
     """
-    batch, num_key_value_heads, slen, head_dim = hidden_states[0].shape
+    batch, num_key_value_heads, slen, head_dim = hidden_states.shape
     if n_rep == 1:
         return hidden_states
-    hidden_states = hidden_states[:, :, :, None, :, :].expand(-1, batch, num_key_value_heads, n_rep, slen, head_dim)
-    return hidden_states.reshape(-1, batch, num_key_value_heads * n_rep, slen, head_dim)
+    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)
+    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)
 
 
 def rotate_half(x):
@@ -99,16 +99,11 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
     # The first two dimensions of cos and sin are always 1, so we can `squeeze` them.
     cos = cos.squeeze(1).squeeze(0)  # [seq_len, dim]
     sin = sin.squeeze(1).squeeze(0)  # [seq_len, dim]
-    if len(position_ids.shape) == 3:
-        cos = cos[position_ids]
-        sin = sin[position_ids]
-    else:
-        cos = cos[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
-        sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
+    cos = cos[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
+    sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
     q_embed = (q * cos) + (rotate_half(q) * sin)
     k_embed = (k * cos) + (rotate_half(k) * sin)
     return q_embed, k_embed
-
 
 
 class LlamaRotaryEmbedding(torch.nn.Module):
@@ -255,7 +250,6 @@ class LlamaAttention(nn.Module):
             past_key_value: Optional[Tuple[torch.Tensor]] = None,
             output_attentions: bool = False,
             use_cache: bool = False,
-            q_hidden_states: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
 
@@ -277,68 +271,49 @@ class LlamaAttention(nn.Module):
             value_states = torch.cat(value_states, dim=-1)
 
         else:
-
-            forward_num = 1 if q_hidden_states is None else q_hidden_states.shape[0] + 1
-            query_states = self.q_proj(hidden_states) if forward_num == 1 else self.q_proj(q_hidden_states[-1])
-            if forward_num > 1:
-                all_hidden_states = torch.cat([hidden_states[None, :, :, :], q_hidden_states], dim=0)   # (forward_num+1, bsz, seq_len, hid_dim)
-            else:
-                all_hidden_states = hidden_states[None, :, :, :]
-            key_states = self.k_proj(all_hidden_states)
-            value_states = self.v_proj(all_hidden_states)
+            query_states = self.q_proj(hidden_states)
+            key_states = self.k_proj(hidden_states)
+            value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(forward_num, bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(2, 3)
-        value_states = value_states.view(forward_num, bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(2, 3)
+        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
 
-        kv_seq_len = key_states[0].shape[-2]
+        kv_seq_len = key_states.shape[-2]
         if past_key_value is not None:
             kv_seq_len += past_key_value[0].shape[-2]
-        cos, sin = self.rotary_emb(value_states[0], seq_len=kv_seq_len)
+        cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
 
         if past_key_value is not None:
             # reuse k, v, self_attention
-            key_states = torch.cat([past_key_value[0][None, ...].expand(forward_num, -1, -1, -1, -1), key_states], dim=3)
-            value_states = torch.cat([past_key_value[1][None, ...].expand(forward_num, -1, -1, -1, -1), value_states], dim=3)
+            key_states = torch.cat([past_key_value[0], key_states], dim=2)
+            value_states = torch.cat([past_key_value[1], value_states], dim=2)
 
-        past_key_value = (key_states[-1], value_states[-1]) if use_cache else None
+        past_key_value = (key_states, value_states) if use_cache else None
 
         # repeat k/v heads if n_kv_heads < n_heads
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = torch.matmul(query_states[None, ...], key_states.transpose(3, 4)) / math.sqrt(self.head_dim)
+        attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
-        if attn_weights.size() != (forward_num, bsz, self.num_heads, q_len, kv_seq_len):
+        if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
                 f"Attention weights should be of size {(bsz, self.num_heads, q_len, kv_seq_len)}, but is"
                 f" {attn_weights.size()}"
             )
 
-        align_masks = None
-        for idx in range(forward_num):
+        if attention_mask is not None:
+            if attention_mask.size() != (bsz, 1, q_len, kv_seq_len):
+                raise ValueError(
+                    f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
+                )
+            attn_weights = attn_weights + attention_mask
 
-            if not idx:
-                align_small_mask = torch.tril(torch.ones(q_len - forward_num + idx + 1, q_len - forward_num + idx + 1))
-            else:
-                align_small_mask = torch.eye(q_len - forward_num + idx + 1)
-                
-            align_big_mask = torch.zeros((q_len, q_len))
-            align_big_mask[forward_num - idx - 1:, :q_len - forward_num + idx + 1] = align_small_mask
-            align_big_mask = align_big_mask.view(1, 1, 1, q_len, q_len).to(attn_weights.device)
-
-            if align_masks is None:
-                align_masks = align_big_mask
-            else:
-                align_masks = torch.cat([align_masks, align_big_mask], dim=0)   # (forward_num, 1, 1, seq_len, seq_len)
-
-        total_attn_weights = (attn_weights * align_masks).sum(dim=0) # (bsz, head_num, seq_len, seq_len)
         # upcast attention to fp32
-        total_attn_weights = nn.functional.softmax(total_attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-
-        attn_weights = total_attn_weights[None, ...] * align_masks
-        attn_output = torch.matmul(attn_weights, value_states).sum(dim=0)   # (bsz, head_num, seq_len, head_dim)
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        attn_output = torch.matmul(attn_weights, value_states)
 
         if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
             raise ValueError(
@@ -427,7 +402,6 @@ class LlamaDecoderLayer(nn.Module):
     def forward(
             self,
             hidden_states: torch.Tensor,
-            q_hidden_states,
             attention_mask: Optional[torch.Tensor] = None,
             position_ids: Optional[torch.LongTensor] = None,
             past_key_value: Optional[Tuple[torch.Tensor]] = None,
@@ -448,7 +422,7 @@ class LlamaDecoderLayer(nn.Module):
             past_key_value (`Tuple(torch.FloatTensor)`, *optional*): cached past key and value projection states
         """
 
-        residual = hidden_states if q_hidden_states is None else q_hidden_states[-1]
+        residual = hidden_states
 
         # if self.index != 0:
         #     hidden_states = self.input_layernorm(hidden_states)
@@ -461,7 +435,6 @@ class LlamaDecoderLayer(nn.Module):
             past_key_value=past_key_value,
             output_attentions=output_attentions,
             use_cache=use_cache,
-            q_hidden_states=q_hidden_states,
         )
         hidden_states = residual + hidden_states
 
@@ -542,7 +515,7 @@ class Model(nn.Module):
         self.fc = nn.Linear(2 * config.hidden_size, config.hidden_size, bias=bias)
         self.act = ACT2FN[config.hidden_act]
         self.logsoftmax = nn.LogSoftmax(dim=-1)
-        for param in self.embed_tokens.parameters():
+        for param in self.parameters():
             param.requires_grad = False
 
     def init_tree(self):
@@ -585,18 +558,6 @@ class Model(nn.Module):
 
         return combined_attention_mask
 
-    def init_layer_weight(self, ea_layer_state_dict):
-        for i in range(1, self.layer_num):
-            ea_layer_state_dict[f'layers.{i}.mlp.gate_proj.weight'] = ea_layer_state_dict['layers.0.mlp.gate_proj.weight']
-            ea_layer_state_dict[f'layers.{i}.mlp.up_proj.weight'] = ea_layer_state_dict['layers.0.mlp.up_proj.weight']
-            ea_layer_state_dict[f'layers.{i}.mlp.down_proj.weight'] = ea_layer_state_dict['layers.0.mlp.down_proj.weight']
-            ea_layer_state_dict[f'layers.{i}.post_attention_layernorm.weight'] = ea_layer_state_dict['layers.0.post_attention_layernorm.weight']
-            ea_layer_state_dict[f'layers.{i}.self_attn.k_proj.weight'] = ea_layer_state_dict['layers.0.self_attn.k_proj.weight']
-            ea_layer_state_dict[f'layers.{i}.self_attn.o_proj.weight'] = ea_layer_state_dict['layers.0.self_attn.o_proj.weight']
-            ea_layer_state_dict[f'layers.{i}.self_attn.q_proj.weight'] = ea_layer_state_dict['layers.0.self_attn.q_proj.weight']
-            ea_layer_state_dict[f'layers.{i}.self_attn.v_proj.weight'] = ea_layer_state_dict['layers.0.self_attn.v_proj.weight']
-        return ea_layer_state_dict
-
     def forward(
             self,
             hidden_states,
@@ -610,9 +571,9 @@ class Model(nn.Module):
             output_hidden_states: Optional[bool] = None,
             return_dict: Optional[bool] = None,
             std=None,
-            q_hidden_states=None,
-            forward_num=0,
+            forward_layer=0,
     ):
+        forward_layer = min(forward_layer, self.layer_num-1)
         batch_size, seq_length, _ = hidden_states.shape
         seq_length_with_past = seq_length
         past_key_values_length = 0
@@ -653,13 +614,12 @@ class Model(nn.Module):
         # hidden_states=self.act(self.fc(torch.cat((inputs_embeds,hidden_states),dim=-1)))
         inputs_embeds = inputs_embeds.to(hidden_states.dtype)
         hidden_states = self.fc(torch.cat((inputs_embeds, hidden_states), dim=-1))
-        if q_hidden_states is not None:
-            q_hidden_states = self.fc(torch.cat((inputs_embeds[None, :, :, :].expand(q_hidden_states.shape[0], -1, -1, -1), q_hidden_states), dim=-1))
+
         all_hidden_states = () if output_hidden_states else None
         next_decoder_cache = () if use_cache else None
 
         # for idx, decoder_layer in enumerate(self.layers):
-        decoder_layer = self.layers[forward_num//self.position_per_layer]
+        decoder_layer = self.layers[forward_layer//self.position_per_layer]
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
 
@@ -677,10 +637,8 @@ class Model(nn.Module):
             layer_outputs = torch.utils.checkpoint.checkpoint(
                 create_custom_forward(decoder_layer),
                 hidden_states,
-                q_hidden_states,
                 attention_mask,
                 position_ids,
-                use_reentrant=False
             )
         else:
             layer_outputs = decoder_layer(
@@ -690,7 +648,6 @@ class Model(nn.Module):
                 past_key_value=past_key_value,
                 output_attentions=output_attentions,
                 use_cache=use_cache,
-                q_hidden_states=q_hidden_states
             )
 
         hidden_states = layer_outputs[0]
@@ -699,12 +656,13 @@ class Model(nn.Module):
             next_decoder_cache += (layer_outputs[2 if output_attentions else 1],)
 
         if use_cache:
-            return hidden_states, next_decoder_cache
+            return hidden_states, next_decoder_cache, position_ids
 
         return hidden_states
 
     def reset_kv(self):
-        self.stable_kv = None
+        # self.stable_kv = None
+        self.stable_kv = [None for _ in range(self.layer_num)]
 
     @torch.no_grad()
     def topK_genrate(self, hidden_states, input_ids, head, logits_processor):
@@ -727,13 +685,13 @@ class Model(nn.Module):
         self.reset()
 
         # with Timer("draft many"):
-        if hasattr(self, "stable_kv") and self.stable_kv is not None:
-            kv_len = self.stable_kv[0][0].shape[2]
-            out_hidden, past_key_values = self(hidden_states, input_ids=input_ids[:, kv_len:],
-                                               past_key_values=self.stable_kv, use_cache=True)
+        if hasattr(self, "stable_kv") and self.stable_kv[0] is not None:
+            kv_len = self.stable_kv[0][0][0].shape[2]
+            out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids[:, kv_len:],
+                                               past_key_values=self.stable_kv[0], use_cache=True, forward_num=0)
         else:
-            out_hidden, past_key_values = self(hidden_states, input_ids=input_ids, use_cache=True)
-        self.stable_kv = past_key_values
+            out_hidden, past_key_values, position_ids = self(hidden_states, input_ids=input_ids, use_cache=True, forward_num=0)
+        self.stable_kv[0] = past_key_values
         last_hidden = out_hidden[:, -1]
 
         last_headout = head(last_hidden)
@@ -745,18 +703,34 @@ class Model(nn.Module):
         scores_list.append(scores[None])
         parents_list.append(torch.zeros(1, dtype=torch.long, device=scores.device))
         ss_token.append(topk_index)
-        input_ids = topk_index
+        # input_ids = topk_index
+        input_ids = torch.cat((input_ids, topk_index), dim=1)
         input_hidden = last_hidden[None].repeat(1, top_k, 1)
+        mid_hidden_states = torch.cat((hidden_states, input_hidden), dim=1)
         tree_mask = self.tree_mask_init
         topk_cs_index = torch.arange(top_k, device=self.embed_tokens.weight.device)
 
         # 4
         for i in range(depth):
+            current_layer = (1 + i)//self.position_per_layer
             self.tree_mask = tree_mask
-            position_ids = len_posi + self.position_ids
+            new_position_ids = len_posi + self.position_ids
+            position_ids = torch.cat((position_ids.squeeze(0), new_position_ids), dim=0)
+            
             # with Timer("draft one"):
-            out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
-                                               position_ids=position_ids, use_cache=True)
+            if hasattr(self, "stable_kv") and self.stable_kv[current_layer] is not None:
+                kv_len = self.stable_kv[current_layer][0][0].shape[2]
+                # pdb.set_trace()
+                out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids[:, kv_len:],
+                                               past_key_values=self.stable_kv[current_layer], position_ids=position_ids, use_cache=True, forward_num=current_layer)
+            else:
+                # out_hidden, past_key_values = self(input_hidden, input_ids=input_ids, past_key_values=past_key_values,
+                                            #    position_ids=position_ids, use_cache=True, forward_num=current_layer)
+                out_hidden, past_key_values, position_ids = self(mid_hidden_states, input_ids=input_ids, position_ids=position_ids, use_cache=True, forward_num=current_layer)
+            
+            out_hidden = out_hidden[:, -top_k:]
+            self.stable_kv[current_layer] = ((past_key_values[0][0][:,:,:self.stable_kv[0][0][0].shape[2],:], past_key_values[0][1][:,:,:self.stable_kv[0][0][1].shape[2],:]),)
+
             len_posi += 1
 
             # with Timer("sort1"):
@@ -784,7 +758,10 @@ class Model(nn.Module):
             #     in_ids = topk_cs_index % top_k
             #     input_ids = topk_index[out_ids, in_ids][None]
             # with Timer("1index"):
-            input_ids = topk_index.view(-1)[topk_cs_index][None]
+            mid_hidden_states = torch.cat((mid_hidden_states, input_hidden), dim=1)
+            # input_ids = topk_index.view(-1)[topk_cs_index][None]
+            new_token = topk_index.view(-1)[topk_cs_index][None]
+            input_ids = torch.cat((input_ids, new_token), dim=1)
             # print(input_ids.equal(input_ids0))
 
             ss_token.append(topk_index)
