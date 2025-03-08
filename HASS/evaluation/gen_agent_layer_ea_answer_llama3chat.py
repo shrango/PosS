@@ -18,7 +18,7 @@ import shortuuid
 from fastchat.llm_judge.common import load_questions
 from tqdm import tqdm
 
-from model.ea_full_model import EaModel
+from model.ea_agent_layer_model import EaModel
 from model.kv_cache import initialize_past_key_values
 from model.utils import *
 
