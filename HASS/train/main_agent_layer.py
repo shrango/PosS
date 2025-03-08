@@ -345,6 +345,8 @@ if accelerator.is_main_process:
 
 config = EConfig.from_pretrained(train_config["config_path"])
 config.update_draft_config(args.draft_model_size)
+if accelerator.is_main_process:
+    print(f"this is config: {config}")
 model = Model(config, load_emb=True, path=args.basepath, forward_num_total=args.forward_num_total, position_per_layer=args.position_per_layer)
 
 
