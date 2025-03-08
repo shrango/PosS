@@ -16,7 +16,7 @@ from .kv_cache import initialize_past_key_values
 
 from .cnets_agent_layer_gen import Model
 from .configs import EConfig
-
+import pdb
 
 
 
@@ -65,6 +65,7 @@ class EaModel(nn.Module):
 
         else:
             self.ea_layer.diff_device = False
+        pdb.set_trace()
         self.ea_layer.load_state_dict(ea_layer_state_dict, strict=True)
         self.ea_layer.to(self.base_model.dtype).to(device)
         self.ea_layer.init_tree()
