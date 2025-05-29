@@ -1,6 +1,24 @@
 # PosS:Position Specialist Generates Better Draft for Speculative Decoding
 > **Authors: [Langlin Huang](https://shrango.github.io/), [Chengsong Huang](https://chengsong-huang.github.io/), [Jixuan Leng](https://jixuanleng.com/), Di Huang, [Jiaxin Huang](https://teapot123.github.io/)**
 
+<!-- Introduction of our work -->
+## PosS
+Feature-based speculative decoding use features from previous steps as input to generate better draft tokens. The draft-generated features deviate from features which will be given by target model. Such deviation accumulates as draft position increases, because the deviated feature becomes input when drafting the next position.
+
+**PosS** proposes several Position Specialists, which are responsible for drafting certain positions. They are trained to generate high-quality draft tokens with certain previous deviated features as inputs. During inference time, these Positions Specialists mitigate feature deviations and make accurate predictions even at large positions.
+![](assets/method-intro.png)
+
+**PosS** achieves higher **position-wise acceptance rate** *(acceptance rate at a position given its previous positions are accepted)* than previous methods:
+<div align="center">
+<img src="assets/pos-acc-rate.png" width="60%">
+</div>
+
+**Table of Content**
+1. [Environment Set-up](#environment-set-up)
+2. [Evaluation](#evaluation-with-trained-models)
+3. [Training](#training)
+4. [Citation](#citation)
+
 ## Environment Set-up
 Please use the following command to install the environment depndencies:
 ```
@@ -98,4 +116,5 @@ CUDA_VISIBLE_DEVICES=0 python -m evaluation.gen_poss_answer_llama3chat (or evalu
     --total-token 60 \
     --depth ${DEPTH}
 ```
-<!-- ## Reference -->
+
+## Citation
