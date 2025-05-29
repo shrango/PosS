@@ -60,15 +60,21 @@ You can calculate the speed-up ratio using the throughputs.
 
 ## Training
 ### Generate Training Data
+We use ShareGPT data for model training, please download it to prepare for training data generation.
+```
+cd ge_data
+wget https://huggingface.co/datasets/Aeala/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V4.3_unfiltered_cleaned_split.json
+```
+
 Please run the commands to generate the training data.
 
 * Llama-2-13B-Chat:
 ```
-python -m ge_data.allocation --base_model "llama2" --model_path "meta-llama/Llama-2-13b-chat-hf" --outdir [path of data]
+python -m ge_data.allocation --base_model "llama2" --model_path "meta-llama/Llama-2-13b-chat-hf" --data_path "ge_data/ShareGPT_V4.3_unfiltered_cleaned_split.json" --outdir [path of data]
 ```
 * Llama-3-8B-Instruct:
 ```
-python -m ge_data.allocation --base_model "llama3" --model_path "meta-llama/Meta-Llama-3-8B-Instruct" --outdir [path of data]
+python -m ge_data.allocation --base_model "llama3" --model_path "meta-llama/Meta-Llama-3-8B-Instruct" --data_path "ge_data/ShareGPT_V4.3_unfiltered_cleaned_split.json" --outdir [path of data]
 ```
 
 ### Train PosS Model
