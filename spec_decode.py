@@ -9,7 +9,7 @@ def main():
     parser.add_argument("--method", choices=["baseline", "eagle", "hass", "poss-1", "poss-2", "poss-3"], required=True)
     parser.add_argument("--temperature", type=float, default=0.0, help="Temperature for generation")
     parser.add_argument("--total-token", type=int, default=60, help="Number of tokens to verify at each draft-verfication round")
-    parser.add_argument("--depth", required=True, type=int, help="Number of positions to draft at each draft-verfication round")
+    parser.add_argument("--depth", type=int, default=6, help="Number of positions to draft at each draft-verfication round")
     parser.add_argument("--repeat-time", type=int, default=1, help="Number of times to repeat the generation")
     parser.add_argument("--dataset", choices=["mt_bench", "alpaca", "gsm8k", "humaneval", "qa", "sum"], required=True)
     args = parser.parse_args()
@@ -23,7 +23,7 @@ def main():
     # Determine the draft and target model.
     draft_path, target_path = determine_draft_and_target_model(args.target_model, args.method)
 
-    # Determine the poss related settings.
+    # Determine the poss related settings. If not poss family, it returns 0, 0.
     forward_num_total, position_per_layer = determine_poss_settings(args.target_model, args.method)
 
     # In the codebase, the depth starts from 0. So it minus 1 to align with the paper.
@@ -57,7 +57,7 @@ def main():
                 "--total-token", f"{args.total_token}",
                 "--depth", f"{args.depth}",
             ]
-        elif generation_code in ["gen_baseline_answer_llama3chat", "gen_baseline_answer_llama2chat"]:
+        elif generation_code in ["evaluation.gen_baseline_answer_llama3chat", "evaluation.gen_baseline_answer_llama2chat"]:
             cmd = [
                 f"CUDA_VISIBLE_DEVICES={device_num}", "python", "-m", generation_code,
                 "--ea-model-path", draft_path,
@@ -87,7 +87,7 @@ def determine_generation_code(target_model, method):
         elif method in ["eagle", "hass"]:
             return "evaluation.gen_ea_answer_llama3chat"
         elif method == "baseline":
-            return "gen_baseline_answer_llama3chat"
+            return "evaluation.gen_baseline_answer_llama3chat"
         else:
             raise ValueError("Unsupported method specified for llama3-8b.")
     elif target_model == "llama2-13b":
@@ -96,7 +96,7 @@ def determine_generation_code(target_model, method):
         elif method in ["eagle", "hass"]:
             return "evaluation.gen_ea_answer_llama2chat"
         elif method == "baseline":
-            return "gen_baseline_answer_llama2chat"
+            return "evaluation.gen_baseline_answer_llama2chat"
         else:
             raise ValueError("Unsupported method specified for llama2-13b.")
     else:
@@ -140,6 +140,8 @@ def determine_poss_settings(target_model, method):
             return 8, 2
         elif method == "poss-3":
             return 12, 3
+        else:
+            return 0, 0
     elif target_model == "llama2-13b":
         if method == "poss-1":
             return 6, 1
@@ -147,6 +149,8 @@ def determine_poss_settings(target_model, method):
             return 6, 2
         elif method == "poss-3":
             return 6, 3
+        else:
+            return 0, 0
     else:
         raise ValueError("Unsupported target model or method specified.")
 
