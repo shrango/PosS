@@ -30,7 +30,7 @@ def main():
     args.depth = args.depth - 1
 
     # Generate the model ID.
-    model_id = f"{args.target_model}-{args.method}-depth{args.depth}-tt{args.total_token}"
+    model_id = f"{args.target_model}-{args.method}-depth{args.depth+1}-tt{args.total_token}"
     for iter in range(args.repeat_time):
         model_id += f"-{iter}"
         cmd = [
