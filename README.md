@@ -47,7 +47,7 @@ python spec_decode.py \
 |------------------|-----------------------------------------------------------------------------|
 | `--device-num`   | CUDA device number                                                          |
 | `--target-model` | The name of the target model, choosing from `{"llama3-8b", "llama2-13b"}`   |
-| `--method`       | The method name of draft model, choosing from `{"eagle", "hass", "poss-1", "poss-2", "poss-3"}` |
+| `--method`       | The method name of draft model, choosing from `{"baseline", "eagle", "hass", "poss-1", "poss-2", "poss-3"}`, where `"baseline"` means not using speculative decoding |
 | `--temperature`  | Generation temperature                                                      |
 | `--total-token`  | The number of tokens to verify at each draft-verification round            |
 | `--depth`        | The number of positions to draft at each draft-verification round          |
@@ -74,7 +74,7 @@ Use this command to evaluate the throughput:
 python evaluation/throughput.py --my_model_json [path of output json]
 ```
 
-You can calculate the speed-up ratio using the throughputs.
+You can calculate the speed-up ratio using the throughputs ratio of evaluated method with the *baseline*.
 
 ## Training
 ### Generate Training Data

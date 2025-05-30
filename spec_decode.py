@@ -6,7 +6,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--device-num", type=int, default=0, help="Device number to use for CUDA")
     parser.add_argument("--target-model", choices=["llama3-8b", "llama2-13b"], required=True)
-    parser.add_argument("--method", choices=["eagle", "hass", "poss-1", "poss-2", "poss-3"], required=True)
+    parser.add_argument("--method", choices=["baseline", "eagle", "hass", "poss-1", "poss-2", "poss-3"], required=True)
     parser.add_argument("--temperature", type=float, default=0.0, help="Temperature for generation")
     parser.add_argument("--total-token", type=int, default=60, help="Number of tokens to verify at each draft-verfication round")
     parser.add_argument("--depth", required=True, type=int, help="Number of positions to draft at each draft-verfication round")
@@ -33,18 +33,39 @@ def main():
     model_id = f"{args.target_model}-{args.method}-depth{args.depth+1}-tt{args.total_token}"
     for iter in range(args.repeat_time):
         model_id += f"-{iter}"
-        cmd = [
-            f"CUDA_VISIBLE_DEVICES={device_num}", "python", "-m", generation_code,
-            "--ea-model-path", draft_path,
-            "--base-model-path", target_path,
-            "--temperature", f"{args.temperature}",
-            "--model-id", model_id,
-            "--forward_num_total", f"{forward_num_total}",
-            "--position_per_layer", f"{position_per_layer}",
-            "--bench-name", args.dataset,
-            "--total-token", f"{args.total_token}",
-            "--depth", f"{args.depth}",
-        ]
+        if generation_code in ["evaluation.gen_poss_answer_llama3chat", "evaluation.gen_poss_answer_llama2chat"]:
+            cmd = [
+                f"CUDA_VISIBLE_DEVICES={device_num}", "python", "-m", generation_code,
+                "--ea-model-path", draft_path,
+                "--base-model-path", target_path,
+                "--temperature", f"{args.temperature}",
+                "--model-id", model_id,
+                "--forward_num_total", f"{forward_num_total}",
+                "--position_per_layer", f"{position_per_layer}",
+                "--bench-name", args.dataset,
+                "--total-token", f"{args.total_token}",
+                "--depth", f"{args.depth}",
+            ]
+        elif generation_code in ["evaluation.gen_ea_answer_llama3chat", "evaluation.gen_ea_answer_llama2chat"]:
+            cmd = [
+                f"CUDA_VISIBLE_DEVICES={device_num}", "python", "-m", generation_code,
+                "--ea-model-path", draft_path,
+                "--base-model-path", target_path,
+                "--temperature", f"{args.temperature}",
+                "--model-id", model_id,
+                "--bench-name", args.dataset,
+                "--total-token", f"{args.total_token}",
+                "--depth", f"{args.depth}",
+            ]
+        elif generation_code in ["gen_baseline_answer_llama3chat", "gen_baseline_answer_llama2chat"]:
+            cmd = [
+                f"CUDA_VISIBLE_DEVICES={device_num}", "python", "-m", generation_code,
+                "--ea-model-path", draft_path,
+                "--base-model-path", target_path,
+                "--temperature", f"{args.temperature}",
+                "--model-id", model_id,
+                "--bench-name", args.dataset,
+            ]
 
         # Run the command as a shell command for the CUDA environment variable to work
         subprocess.run(" ".join(cmd), shell=True)
@@ -63,13 +84,21 @@ def determine_generation_code(target_model, method):
     if target_model == "llama3-8b":
         if method in ["poss-1", "poss-2", "poss-3"]:
             return "evaluation.gen_poss_answer_llama3chat"
-        else:
+        elif method in ["eagle", "hass"]:
             return "evaluation.gen_ea_answer_llama3chat"
+        elif method == "baseline":
+            return "gen_baseline_answer_llama3chat"
+        else:
+            raise ValueError("Unsupported method specified for llama3-8b.")
     elif target_model == "llama2-13b":
         if method in ["poss-1", "poss-2", "poss-3"]:
             return "evaluation.gen_poss_answer_llama2chat"
-        else:
+        elif method in ["eagle", "hass"]:
             return "evaluation.gen_ea_answer_llama2chat"
+        elif method == "baseline":
+            return "gen_baseline_answer_llama2chat"
+        else:
+            raise ValueError("Unsupported method specified for llama2-13b.")
     else:
         raise ValueError("Unsupported target model specified.")
 
@@ -77,6 +106,7 @@ def determine_draft_and_target_model(target_model, method):
     if target_model == "llama3-8b":
         target_path = "meta-llama/Meta-Llama-3-8B-Instruct"
         draft_path_map = {
+            "baseline": "HINT-lab/EAGLE-Llama3-8B-Instruct-Reproduce",
             "eagle": "HINT-lab/EAGLE-Llama3-8B-Instruct-Reproduce",
             "hass": "HINT-lab/HASS-Llama3-8B-Instruct-Reproduce",
             "poss-1": "HINT-lab/PosS1-Llama3-8B-Instruct",
@@ -87,6 +117,7 @@ def determine_draft_and_target_model(target_model, method):
     elif target_model == "llama2-13b":
         target_path = "meta-llama/Llama-2-13b-chat-hf"
         draft_path_map = {
+            "baseline": "yuhuili/EAGLE-llama2-chat-13B",
             "eagle": "yuhuili/EAGLE-llama2-chat-13B",
             "hass": "HArmonizedSS/HASS-LLaMA2-Chat-13B",
             "poss-1": "HINT-lab/PosS1-Llama2-13B-Chat",
