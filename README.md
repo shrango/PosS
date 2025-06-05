@@ -118,3 +118,15 @@ CUDA_VISIBLE_DEVICES=0 python -m evaluation.gen_poss_answer_llama3chat (or evalu
 ```
 
 ## Citation
+If you find this work is useful, please cite as:
+```
+@misc{huang2025posspositionspecialistgenerates,
+      title={POSS: Position Specialist Generates Better Draft for Speculative Decoding}, 
+      author={Langlin Huang and Chengsong Huang and Jixuan Leng and Di Huang and Jiaxin Huang},
+      year={2025},
+      eprint={2506.03566},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2506.03566}, 
+}
+```
