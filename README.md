@@ -1,6 +1,9 @@
 # PosS:Position Specialist Generates Better Draft for Speculative Decoding
 > **Authors: [Langlin Huang](https://shrango.github.io/), [Chengsong Huang](https://chengsong-huang.github.io/), [Jixuan Leng](https://jixuanleng.com/), Di Huang, [Jiaxin Huang](https://teapot123.github.io/)**
 
+[![arXiv](https://img.shields.io/badge/arXiv-2506.03566-b31b1b.svg?logo=arXiv)](https://arxiv.org/abs/2506.03566)
+[![code](https://img.shields.io/badge/Github-Code-keygen.svg?logo=github)](https://github.com/shrango/PosS)
+[![model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging_Face-Model-blue.svg)](https://huggingface.co/collections/HINT-lab/poss-speculative-decoding-68376c8e7aa6a0fe23dc2116)
 <!-- Introduction of our work -->
 ## PosS
 Feature-based speculative decoding use features from previous steps as input to generate better draft tokens. The draft-generated features deviate from features which will be given by target model. Such deviation accumulates as draft position increases, because the deviated feature becomes input when drafting the next position.
