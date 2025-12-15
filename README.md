@@ -16,6 +16,8 @@ Feature-based speculative decoding use features from previous steps as input to 
 <img src="assets/pos-acc-rate.png" width="60%">
 </div>
 
+PosS(E2) means it applies EAGLE-2 structure as backbone, and PosS(E3) means it applies EAGLE-3 structure as backbone.
+
 **Table of Content**
 1. [Environment Set-up](#environment-set-up)
 2. [Evaluation](#evaluation-with-trained-models)
@@ -63,6 +65,11 @@ We also provide our trained parameters in Huggingface:
 |:---:|:---:|:---:|:---:|
 |Llama3-8B-Instruct|[HINT-lab/PosS1-Llama3-8B-Instruct](https://huggingface.co/HINT-lab/PosS1-Llama3-8B-Instruct)|[HINT-lab/PosS2-Llama3-8B-Instruct](https://huggingface.co/HINT-lab/PosS2-Llama3-8B-Instruct)|[HINT-lab/PosS3-Llama3-8B-Instruct](https://huggingface.co/HINT-lab/PosS3-Llama3-8B-Instruct)|
 |Llama2-13B-Chat|[HINT-lab/PosS1-Llama2-13B-Chat](https://huggingface.co/HINT-lab/PosS1-Llama2-13B-Chat)|[HINT-lab/PosS2-Llama2-13B-Chat](https://huggingface.co/HINT-lab/PosS2-Llama2-13B-Chat)|[HINT-lab/PosS3-Llama2-13B-Chat](https://huggingface.co/HINT-lab/PosS3-Llama2-13B-Chat)|
+
+#### ⚠️ **Update**:
+
+PosS with EALGE-3 structure: [HINT-lab/PosS3-E3-Llama3.1-8B-Instruct](https://huggingface.co/HINT-lab/PosS3-E3-Llama3.1-8B-Instruct)
+
 
 ### Evaluation Metrics
 #### Acceptance Length
@@ -119,6 +126,21 @@ CUDA_VISIBLE_DEVICES=0 python -m evaluation.gen_poss_answer_llama3chat (or evalu
     --total-token 60 \
     --depth ${DEPTH}
 ```
+### ⚠️ **Update**:
+
+We now support training PosS(E3) with SpecForge and evaluating PosS(E3) with vLLM.
+
+#### Training with SpecForge
+
+Enter the SpecForge folder `cd specforge` and run the script `bash run_llama3.1_poss_eagle3_online_mix_data.sh`.
+
+#### Evaluation with vLLM
+
+Enter the vllm folder `cd vllm` and run the script `bash eval-poss.sh`.
+
+For standard generation, please run `bash eval-base.sh`.
+
+For EAGLE-3 baseline, please run `bash eval-eagle3.sh`
 
 ## Citation
 If you find this work is useful, please cite as:

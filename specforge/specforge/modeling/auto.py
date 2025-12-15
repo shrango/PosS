@@ -1,0 +1,256 @@
+import json
+import os
+import warnings
+from typing import Optional, Union
+
+import torch
+from transformers import AutoConfig
+from transformers import AutoModelForCausalLM as AutoModelForCausalLMBase
+from transformers import (
+    Llama4Config,
+    Llama4TextConfig,
+    LlamaConfig,
+    PretrainedConfig,
+    Qwen3MoeConfig,
+    modeling_utils,
+)
+
+from specforge.utils import default_torch_dtype
+
+from .draft.llama3_eagle import LlamaForCausalLMEagle3
+from .draft.llama3_poss_eagle import LlamaForCausalLMPosSEagle3
+from .target.llama4 import Llama4ForCausalLM
+from .target.qwen3_moe import Qwen3MoeForCausalLM
+
+
+class AutoEagle3DraftModel(AutoModelForCausalLMBase):
+    # the model mapping is currently hardcoded, we should support lazy model mapping via registry
+    _model_mapping = {
+        LlamaConfig: LlamaForCausalLMEagle3,
+    }
+
+    @classmethod
+    def from_config(cls, config: PretrainedConfig, **config_kwargs):
+        """
+        This class method takes a configuration object and create its model based on the
+        _model_mapping class variable.
+
+        Args:
+            config (PretrainedConfig): A configuration object.
+
+        Returns:
+            A model instance.
+        """
+        # get the model class from the
+        _model_cls = cls._model_mapping[type(config)]
+        return _model_cls(config, **config_kwargs)
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        pretrained_model_name_or_path: Union[str, os.PathLike[str]],
+        *model_args,
+        **kwargs,
+    ):
+        original_warn = modeling_utils.logger.warning
+
+        def filtered_warning(msg):
+            if "embed_tokens.weight" in str(msg) and "initialized" in str(msg):
+                return
+            original_warn(msg)
+
+        modeling_utils.logger.warning = filtered_warning
+
+        try:
+            model = super().from_pretrained(
+                pretrained_model_name_or_path, *model_args, **kwargs
+            )
+        finally:
+            modeling_utils.logger.warning = original_warn
+
+        return model
+
+
+class AutoPosSEagle3DraftModel(AutoModelForCausalLMBase):
+    # the model mapping is currently hardcoded, we should support lazy model mapping via registry
+    _model_mapping = {
+        LlamaConfig: LlamaForCausalLMPosSEagle3,
+    }
+
+    @classmethod
+    def from_config(cls, config: PretrainedConfig, **config_kwargs):
+        """
+        This class method takes a configuration object and create its model based on the
+        _model_mapping class variable.
+
+        Args:
+            config (PretrainedConfig): A configuration object.
+
+        Returns:
+            A model instance.
+        """
+        # get the model class from the
+        _model_cls = cls._model_mapping[type(config)]
+        return _model_cls(config, **config_kwargs)
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        pretrained_model_name_or_path: Union[str, os.PathLike[str]],
+        *model_args,
+        **kwargs,
+    ):
+        original_warn = modeling_utils.logger.warning
+
+        def filtered_warning(msg):
+            if "embed_tokens.weight" in str(msg) and "initialized" in str(msg):
+                return
+            original_warn(msg)
+
+        modeling_utils.logger.warning = filtered_warning
+
+        try:
+            # 1. 正常加载模型（会忽略不匹配的参数）
+            model = super().from_pretrained(
+                pretrained_model_name_or_path, *model_args, **kwargs
+            )
+            
+            # 2. 手动加载被忽略的midlayer参数
+            # 构建checkpoint路径
+            if os.path.isdir(pretrained_model_name_or_path):
+                checkpoint_path = os.path.join(pretrained_model_name_or_path, "model.safetensors")
+                if not os.path.exists(checkpoint_path):
+                    checkpoint_path = os.path.join(pretrained_model_name_or_path, "pytorch_model.bin")
+            else:
+                checkpoint_path = pretrained_model_name_or_path
+            
+            # 加载状态字典
+            if checkpoint_path.endswith('.safetensors'):
+                import safetensors.torch
+                state_dict = safetensors.torch.load_file(checkpoint_path)
+            else:
+                state_dict = torch.load(checkpoint_path, map_location='cpu')
+                if 'state_dict' in state_dict:
+                    state_dict = state_dict['state_dict']
+            
+            # 3. 提取midlayer参数并复制到midlayers的每一层
+            midlayer_params = {}
+            for key, value in state_dict.items():
+                if 'midlayer.' in key:
+                    # 存储midlayer参数
+                    midlayer_params[key] = value
+            
+            if midlayer_params:
+                print(f"找到 {len(midlayer_params)} 个midlayer参数，正在复制到midlayers...")
+                
+                # 复制到每一层
+                for i in range(len(model.midlayers)):
+                    for old_key, param_value in midlayer_params.items():
+                        # 将 midlayer. 替换为 midlayers.{i}.
+                        new_key = old_key.replace('midlayer.', f'midlayers.{i}.')
+                        
+                        # 确保新键存在于模型中
+                        if new_key in model.state_dict():
+                            # 复制参数值
+                            model.state_dict()[new_key].copy_(param_value.to(model.device))
+                            print(f"已复制: {old_key} -> {new_key}")
+                        else:
+                            print(f"警告: 目标键不存在: {new_key}")
+            else:
+                print("未找到midlayer参数")
+        finally:
+            modeling_utils.logger.warning = original_warn
+        # try:
+        #     model = super().from_pretrained(
+        #         pretrained_model_name_or_path, *model_args, **kwargs
+        #     )
+        #     print(f"this is model:{model}")
+        # finally:
+        #     modeling_utils.logger.warning = original_warn
+
+        return model
+
+class AutoDistributedTargetModel(AutoModelForCausalLMBase):
+    # the model mapping is currently hardcoded, we should support lazy model mapping via registry
+    _model_mapping = {
+        Llama4TextConfig: [Llama4ForCausalLM],
+        Qwen3MoeConfig: [Qwen3MoeForCausalLM],
+    }
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        pretrained_model_name_or_path: Union[str, os.PathLike[str]],
+        torch_dtype: torch.dtype = None,
+        device: str = None,
+        cache_dir: Optional[str] = None,
+        **config_kwargs,
+    ):
+        config = AutoConfig.from_pretrained(
+            pretrained_model_name_or_path, **config_kwargs
+        )
+
+        if isinstance(config, Llama4Config):
+            config = config.text_config
+
+        assert (
+            type(config) in cls._model_mapping
+        ), f"Unsupported config type: {type(config)}"
+        model_cls = cls._model_mapping[type(config)][0]
+
+        if device is None:
+            device = torch.device("cpu")
+        else:
+            device = torch.device(device)
+
+        if torch_dtype is None:
+            torch_dtype = torch.get_default_dtype()
+
+        # load model
+        with default_torch_dtype(torch_dtype), torch.device(device):
+            model = model_cls(config)
+        model.load_checkpoint(pretrained_model_name_or_path, cache_dir=cache_dir)
+
+        # just ensure that all the parameters follow the same dtype and device
+        # model = model.to(torch_dtype)
+        # model = model.to(device)
+
+        return model
+
+
+class AutoDraftModelConfig:
+
+    _config_mapping = {
+        "LlamaForCausalLMEagle3": LlamaConfig,
+    }
+
+    @classmethod
+    def from_file(cls, config_path: str):
+        """
+        This class method takes a configuration file path and create its configuration object based on the
+        _config_mapping class variable.
+
+        Args:
+            config_path (str): A path to a configuration file.
+
+        Returns:
+            A configuration object.
+        """
+        with open(config_path, "r") as f:
+            config = json.load(f)
+
+        # check for architectures
+        architectures = config.get("architectures", None)
+
+        if architectures is None:
+            raise ValueError("No architectures found in the config file")
+
+        if len(architectures) != 1:
+            raise ValueError("Only one architecture is supported")
+
+        architecture = architectures[0]
+
+        if architecture not in cls._config_mapping:
+            raise ValueError(f"Architecture {architecture} not supported")
+
+        return cls._config_mapping[architecture].from_dict(config)
