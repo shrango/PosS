@@ -155,3 +155,5 @@ If you find this work is useful, please cite as:
       url={https://arxiv.org/abs/2506.03566}, 
 }
 ```
+
+Note: This repository includes modified code adapted from vLLM (Apache-2.0).
