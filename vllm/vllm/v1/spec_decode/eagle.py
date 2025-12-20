@@ -202,6 +202,12 @@ class EagleProposer:
         else:
             self.positions[:num_tokens] = positions
 
+    def select_layer_idx(self, token_index, poss_decoding=False):
+        if poss_decoding:
+            return (token_index+1)//3
+        else:
+            return 0
+
     def propose(
         self,
         # [num_tokens]
@@ -302,8 +308,7 @@ class EagleProposer:
                 positions=self._get_positions(num_input_tokens),
                 hidden_states=self.hidden_states[:num_input_tokens],
                 inputs_embeds=inputs_embeds,
-                # 这是第一个position
-                layer_num=0
+                layer_num=0 # This is the first position, so layer_num=0
             )
             if self.method == "mtp":
                 last_hidden_states = ret_hidden_states
@@ -467,9 +472,11 @@ class EagleProposer:
                 num_tokens=input_batch_size,
                 cudagraph_runtime_mode=cudagraph_runtime_mode,
             ):
-                # 这是第2个位置开始
-                # layer_num = (token_index+1)//3
-                layer_num = 0
+                # It starts from the second position here, 
+                # so token_index+1 is the real position number
+                draft_model_name = self.vllm_config.speculative_config.model
+                apply_poss = True if "poss" in draft_model_name.lower() else False
+                layer_num = self.select_layer_idx(token_index, poss_decoding=apply_poss)
                 ret_hidden_states = self.model(
                     input_ids=input_ids,
                     positions=self._get_positions(input_batch_size),
@@ -786,8 +793,11 @@ class EagleProposer:
                 num_tokens=num_input_tokens,
                 cudagraph_runtime_mode=cudagraph_runtime_mode,
             ):
-                # layer_num = (level+1)//3
-                layer_num = 0
+                # It starts from the second position here, 
+                # so token_index+1 is the real position number
+                draft_model_name = self.vllm_config.speculative_config.model
+                apply_poss = True if "poss" in draft_model_name.lower() else False
+                layer_num = self.select_layer_idx(token_index, poss_decoding=apply_poss)
                 last_hidden_states, hidden_states = self.model(
                     input_ids=self.input_ids[:num_input_tokens],
                     positions=self.positions[:num_input_tokens],

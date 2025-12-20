@@ -199,14 +199,8 @@ class LlamaModel(nn.Module):
         assert hidden_states.shape[-1] == input_embeds.shape[-1]
 
         residual = None
-        # 改这里
-        # for layer in self.layers:
-        #     hidden_states, residual = layer(
-        #         positions=positions,
-        #         embeds=input_embeds,
-        #         hidden_states=hidden_states,
-        #         residual=residual,
-        #     )
+        # In EAGLE-3, the number of layers is always 1,
+        # so we take advantage of this, and set layer = self.layers[layer_num]
         layer = self.layers[layer_num]
         hidden_states, residual = layer(
                 positions=positions,
