@@ -204,13 +204,13 @@ class EagleProposer:
 
     def select_layer_idx(self, token_index, poss_decoding=False):
         if poss_decoding:
-            return (token_index+1)//3
+            # return (token_index+1)//3
             # TODO: 
             # position attribution 1,3,more is better than 3,3,3
-            # if token_index < 3:
-            #     return 1
-            # else:
-            #     return 2
+            if token_index < 3:
+                return 1
+            else:
+                return 2
         else:
             return 0
 

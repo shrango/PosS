@@ -250,14 +250,14 @@ def main():
         hidden_states_loss=args.hidden_states_loss,
     )
     # 2) freeze: skip_first_n_layers determines the first N layers are not trained
-    def freeze_midlayers(model, n_skip: int):
+    def freeze_layers(model, n_skip: int):
         frozen_names = []
         if n_skip==0:
             return frozen_names
         for name, p in model.named_parameters():
-            # focus only on midlayers.x.*
+            # focus only on layers.x.*
             print(f"Name: {name}")
-            if name.startswith("draft_model.midlayers."):
+            if name.startswith("draft_model.layers."):
                 layer_idx = int(name.split(".")[2])  # 提取 x
                 if layer_idx < n_skip:
                     p.requires_grad = False
@@ -267,8 +267,8 @@ def main():
                 frozen_names.append(name)
         return frozen_names
 
-    frozen = freeze_midlayers(eagle3_model, args.skip_first_n_layers)
-    print(f"[Freeze] {len(frozen)} params frozen in first {args.skip_first_n_layers} midlayers.\n{frozen}")
+    frozen = freeze_layers(eagle3_model, args.skip_first_n_layers)
+    print(f"[Freeze] {len(frozen)} params frozen in first {args.skip_first_n_layers} layers.\n{frozen}")
 
     # eagle3_model = DDP(eagle3_model, find_unused_parameters=True)
     eagle3_model = FSDP(

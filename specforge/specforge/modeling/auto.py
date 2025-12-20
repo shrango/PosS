@@ -110,13 +110,12 @@ class AutoPosSEagle3DraftModel(AutoModelForCausalLMBase):
         modeling_utils.logger.warning = filtered_warning
 
         try:
-            # 1. 正常加载模型（会忽略不匹配的参数）
+            # 1. try to load model
             model = super().from_pretrained(
                 pretrained_model_name_or_path, *model_args, **kwargs
             )
             
-            # 2. 手动加载被忽略的midlayer参数
-            # 构建checkpoint路径
+            # 2. mannually load ignored layer parameters
             if os.path.isdir(pretrained_model_name_or_path):
                 checkpoint_path = os.path.join(pretrained_model_name_or_path, "model.safetensors")
                 if not os.path.exists(checkpoint_path):
@@ -124,7 +123,6 @@ class AutoPosSEagle3DraftModel(AutoModelForCausalLMBase):
             else:
                 checkpoint_path = pretrained_model_name_or_path
             
-            # 加载状态字典
             if checkpoint_path.endswith('.safetensors'):
                 import safetensors.torch
                 state_dict = safetensors.torch.load_file(checkpoint_path)
@@ -133,40 +131,31 @@ class AutoPosSEagle3DraftModel(AutoModelForCausalLMBase):
                 if 'state_dict' in state_dict:
                     state_dict = state_dict['state_dict']
             
-            # 3. 提取midlayer参数并复制到midlayers的每一层
-            midlayer_params = {}
+            # 3. extract layer parameters and copy to each of the layers
+            layer_params = {}
             for key, value in state_dict.items():
                 if 'midlayer.' in key:
-                    # 存储midlayer参数
-                    midlayer_params[key] = value
+                    # save midlayer parameter (That is how EALGE-3 name it)
+                    # we change it to layer
+                    layer_params[key] = value
             
-            if midlayer_params:
-                print(f"找到 {len(midlayer_params)} 个midlayer参数，正在复制到midlayers...")
+            if layer_params:
+                print(f"Find {len(layer_params)} midlayer parameters. Copying to all layers...")
                 
-                # 复制到每一层
-                for i in range(len(model.midlayers)):
-                    for old_key, param_value in midlayer_params.items():
-                        # 将 midlayer. 替换为 midlayers.{i}.
-                        new_key = old_key.replace('midlayer.', f'midlayers.{i}.')
+                for i in range(len(model.layers)):
+                    for old_key, param_value in layer_params.items():
+                        # replace midlayer with layers.{i}.
+                        new_key = old_key.replace('midlayer.', f'layers.{i}.')
                         
-                        # 确保新键存在于模型中
                         if new_key in model.state_dict():
-                            # 复制参数值
                             model.state_dict()[new_key].copy_(param_value.to(model.device))
-                            print(f"已复制: {old_key} -> {new_key}")
+                            print(f"Copied : {old_key} -> {new_key}")
                         else:
-                            print(f"警告: 目标键不存在: {new_key}")
+                            print(f"Warning: target key does not exist: {new_key}")
             else:
-                print("未找到midlayer参数")
+                print("Can not find midlayer parameters")
         finally:
             modeling_utils.logger.warning = original_warn
-        # try:
-        #     model = super().from_pretrained(
-        #         pretrained_model_name_or_path, *model_args, **kwargs
-        #     )
-        #     print(f"this is model:{model}")
-        # finally:
-        #     modeling_utils.logger.warning = original_warn
 
         return model
 

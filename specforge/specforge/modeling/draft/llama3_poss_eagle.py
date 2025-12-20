@@ -686,7 +686,7 @@ class LlamaForCausalLMPosSEagle3(PosSEagle3DraftModel):
         #     self.layer_num = 3
         # else:
         #     self.layer_num = 2
-        self.midlayers = nn.ModuleList([LlamaDecoderLayer(config, attention_backend=attention_backend) for _ in range(self.layer_num)])
+        self.layers = nn.ModuleList([LlamaDecoderLayer(config, attention_backend=attention_backend) for _ in range(self.layer_num)])
 
         if hasattr(config, "target_hidden_size"):
             self.fc = torch.nn.Linear(
@@ -759,8 +759,7 @@ class LlamaForCausalLMPosSEagle3(PosSEagle3DraftModel):
 
         # fc
         hidden_states = self.fc(hidden_states)
-        # decoder_layer = self.midlayers[forward_num//self.pos_per_layer]
-        decoder_layer = self.midlayers[self.layer_select(forward_num)]
+        decoder_layer = self.layers[self.layer_select(forward_num)]
         hidden_states = decoder_layer(
             input_emb=inputs_embeds,
             hidden_states=hidden_states,
@@ -800,8 +799,7 @@ class LlamaForCausalLMPosSEagle3(PosSEagle3DraftModel):
         use_cache: bool = True,
         forward_num: int = 0,
     ) -> torch.Tensor:
-        # decoder_layer = self.midlayers[forward_num//self.pos_per_layer]
-        decoder_layer = self.midlayers[self.layer_select(forward_num)]
+        decoder_layer = self.layers[self.layer_select(forward_num)]
         return decoder_layer(
             input_emb=input_embeds,
             hidden_states=hidden_states,
