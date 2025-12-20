@@ -205,6 +205,12 @@ class EagleProposer:
     def select_layer_idx(self, token_index, poss_decoding=False):
         if poss_decoding:
             return (token_index+1)//3
+            # TODO: 
+            # position attribution 1,3,more is better than 3,3,3
+            # if token_index < 3:
+            #     return 1
+            # else:
+            #     return 2
         else:
             return 0
 
@@ -797,7 +803,7 @@ class EagleProposer:
                 # so token_index+1 is the real position number
                 draft_model_name = self.vllm_config.speculative_config.model
                 apply_poss = True if "poss" in draft_model_name.lower() else False
-                layer_num = self.select_layer_idx(token_index, poss_decoding=apply_poss)
+                layer_num = self.select_layer_idx(level, poss_decoding=apply_poss)
                 last_hidden_states, hidden_states = self.model(
                     input_ids=self.input_ids[:num_input_tokens],
                     positions=self.positions[:num_input_tokens],
